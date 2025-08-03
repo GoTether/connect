@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firebase Database Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, get, set, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    async function fetchAndDisplay(path = "/") {
+      const output = document.getElementById("output");
+      output.innerHTML = `<p>Loading...</p>`;
+      try {
+        const snapshot = await get(ref(db, path));
+        output.textContent = JSON.stringify(snapshot.val(), null, 2);
+      } catch (err) {
+        output.innerHTML = `<p>Error: ${err.message}</p>`;
+      }
+    }
+
+    async function updatePath() {
+      const path = document.getElementById("path").value.trim();
+      const jsonData = document.getElementById("jsonInput").value.trim();
+      try {
+        const parsed = JSON.parse(jsonData);
+        await set(ref(db, path), parsed);
+        alert("Data written.");
+        fetchAndDisplay(path);
+      } catch (err) {
+        alert("Invalid JSON or error writing: " + err.message);
+      }
+    }
+
+    async function deletePath() {
+      const path = document.getElementById("path").value.trim();
+      if (confirm(`Delete ${path}?`)) {
+        await remove(ref(db, path));
+        alert("Deleted.");
+        fetchAndDisplay("/");
+      }
+    }
+
+    window.fetchAndDisplay = fetchAndDisplay;
+    window.updatePath = updatePath;
+    window.deletePath = deletePath;
+  </script>
+</head>
+<body class="p-6 font-sans">
+  <h1 class="text-xl font-bold">Firebase Manager</h1>
+  <input id="path" class="border p-2 w-full my-2" placeholder="Path (e.g. ids/abc123)" />
+  <textarea id="jsonInput" class="border p-2 w-full h-40 font-mono" placeholder="Paste JSON here..."></textarea>
+  <div class="flex gap-2 mt-2">
+    <button onclick="updatePath()" class="bg-green-600 text-white px-4 py-2">Write</button>
+    <button onclick="deletePath()" class="bg-red-600 text-white px-4 py-2">Delete</button>
+    <button onclick="fetchAndDisplay(document.getElementById('path').value)" class="bg-blue-600 text-white px-4 py-2">Load</button>
+  </div>
+  <pre id="output" class="bg-gray-100 p-4 mt-4 overflow-auto"></pre>
+</body>
+</html>

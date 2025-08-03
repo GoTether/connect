@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tether Redirect</title>
+  <script type="module">
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { db } from './assets/js/firebase-init.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    if (!id) {
+      window.location.href = 'display.html';
+    } else {
+      const idRef = ref(db, 'ids/' + id);
+      get(idRef).then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          window.location.href = `display.html?id=${id}`;
+        } else {
+          window.location.href = `display.html?id=${id}`;
+        }
+      });
+    }
+  </script>
+</head>
+<body>
+  <p>Checking QR Code status...</p>
+</body>
+</html>
