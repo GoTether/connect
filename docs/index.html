@@ -5,11 +5,14 @@
   <title>Tether</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Tether links the physical world to digital memory. Scan to log, track, and tell stories.">
-  <link rel="icon" href="favicon.ico">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <!-- <link rel="icon" href="favicon.ico"> -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline';">
+  <!-- Firebase CDN scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div id="welcome" role="main" aria-live="polite">
+  <div id="welcome" role="main" aria-live="polite" style="display:none">
     <h2>Welcome to Tether!</h2>
     <p>Start by providing an <code>id</code> in the URL to view or create a tether.</p>
     <p>If you think you should see a page here, check your URL and try again.</p>
@@ -18,9 +21,21 @@
   <noscript>
     <p style="color: red;">JavaScript is required to use Tether. Please enable JavaScript in your browser.</p>
   </noscript>
-  <script type="module">
-    import { database } from './firebase-init.js';
-    import { ref, get } from "firebase/database";
+  <script>
+    // Your Firebase config (replace with yours if needed)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
     // Utility to get query params
     function getQueryParam(name) {
@@ -42,15 +57,7 @@
       if (welcomeDiv) welcomeDiv.style.display = 'none';
 
       // Always redirect to display.html with the id
-      try {
-        window.location.href = `display.html?id=${encodeURIComponent(id)}`;
-      } catch (error) {
-        // Show error message
-        welcomeDiv.innerHTML = `<h2>Error</h2>
-          <p>There was an error loading the tether: ${error.message}</p>
-          <p><a href="index.html">Return to Home</a></p>`;
-        welcomeDiv.style.display = 'block';
-      }
+      window.location.href = `display.html?id=${encodeURIComponent(id)}`;
     });
   </script>
 </body>
