@@ -3,6 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <title>Tether</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tether links the physical world to digital memory. Scan to log, track, and tell stories.">
+  <link rel="icon" href="favicon.ico">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+</head>
+<body>
+  <div id="welcome" role="main" aria-live="polite">
+    <h2>Welcome to Tether!</h2>
+    <p>Start by providing an <code>id</code> in the URL to view or create a tether.</p>
+    <p>If you think you should see a page here, check your URL and try again.</p>
+    <p><a href="https://github.com/GoTether/connect">Project GitHub</a></p>
+  </div>
+  <noscript>
+    <p style="color: red;">JavaScript is required to use Tether. Please enable JavaScript in your browser.</p>
+  </noscript>
   <script type="module">
     import { database } from './firebase-init.js';
     import { ref, get } from "firebase/database";
@@ -18,31 +33,36 @@
       const welcomeDiv = document.getElementById('welcome');
 
       if (!id) {
-        // Show welcome message and skip the rest
+        // Show welcome message, do not redirect
         welcomeDiv.style.display = 'block';
         return;
       }
 
-      // Hide welcome message (if present)
+      // Hide welcome message
       if (welcomeDiv) welcomeDiv.style.display = 'none';
 
       // Check Firebase for tethers/{id}
       try {
         const tetherRef = ref(database, `tethers/${id}`);
         const snapshot = await get(tetherRef);
-        // Redirect to display.html?id={id} regardless of data existence
-        window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+        if (snapshot.exists()) {
+          // Data exists, redirect
+          window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+        } else {
+          // Data does not exist, show error message instead of redirecting blindly
+          welcomeDiv.innerHTML = `<h2>Tether Not Found</h2>
+            <p>No tether found for id: <code>${id}</code>.</p>
+            <p><a href="index.html">Return to Home</a></p>`;
+          welcomeDiv.style.display = 'block';
+        }
       } catch (error) {
-        // On error, still redirect
-        window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+        // Show error message
+        welcomeDiv.innerHTML = `<h2>Error</h2>
+          <p>There was an error loading the tether: ${error.message}</p>
+          <p><a href="index.html">Return to Home</a></p>`;
+        welcomeDiv.style.display = 'block';
       }
     });
   </script>
-</head>
-<body>
-  <div id="welcome" style="display:none;">
-    <h2>Welcome to Tether!</h2>
-    <p>Start by providing an <code>id</code> in the URL to view or create a tether.</p>
-  </div>
 </body>
 </html>
