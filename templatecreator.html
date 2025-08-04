@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create New Global Template</title>
+  <script type="module">
+    import { database } from './firebase-init.js';
+    import { ref, set, get } from "firebase/database";
+
+    // Helper to render dynamic field list
+    function renderFieldInputs(fields) {
+      const list = document.createElement('div');
+      list.id = "fields-list";
+      fields.forEach((field, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.style.marginBottom = "0.5em";
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+
+        const input = document.createElement('input');
+        input.type = "text";
+        input.value = field;
+        input.placeholder = "Field label";
+        input.name = `field-${idx}`;
+        input.style.flex = "1";
+        input.oninput = () => { fields[idx] = input.value; };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = "button";
+        removeBtn.textContent = "✕";
+        removeBtn.title = "Remove field";
+        removeBtn.style.marginLeft = "0.5em";
+        removeBtn.onclick = () => {
+          fields.splice(idx, 1);
+          renderFields();
+        };
+
+        wrapper.appendChild(input);
+        if (fields.length > 1) wrapper.appendChild(removeBtn);
+
+        list.appendChild(wrapper);
+      });
+      return list;
+    }
+
+    let fields = [""]; // At least one field input
+
+    function renderFields() {
+      const fieldsContainer = document.getElementById('fields-container');
+      fieldsContainer.innerHTML = "";
+      fieldsContainer.appendChild(renderFieldInputs(fields));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Form structure
+      document.body.innerHTML = `
+        <div id="main-container" style="background:#fff;max-width:500px;margin:2em auto;padding:2em;border-radius:10px;box-shadow:0 2px 8px #ccc;">
+          <h2>Create New Global Template</h2>
+          <form id="template-form" autocomplete="off">
+            <label for="template-name"><strong>Template Name (unique key):</strong></label><br>
+            <input type="text" id="template-name" name="template-name" required style="width:100%;margin-bottom:1em;" autocomplete="off"><br>
+            <label><strong>Field Labels:</strong></label>
+            <div id="fields-container"></div>
+            <button type="button" id="add-field-btn" style="margin:0.5em 0 1em 0;">Add Field</button><br>
+            <button type="submit" style="font-size:1.1em;padding:0.5em 1.5em;">Save Template</button>
+          </form>
+          <div id="confirmation" style="margin-top:1.5em; color:green; font-weight:bold;"></div>
+        </div>
+      `;
+
+      renderFields();
+
+      document.getElementById('add-field-btn').onclick = () => {
+        fields.push("");
+        renderFields();
+      };
+
+      document.getElementById('template-form').onsubmit = async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('template-name').value.trim();
+        if (!name) {
+          alert("Please enter a template name.");
+          return;
+        }
+        // Check uniqueness
+        const templateRef = ref(database, `global_templates/${name}`);
+        const existing = await get(templateRef);
+        if (existing.exists()) {
+          alert("A template with this name already exists. Please use a unique name.");
+          return;
+        }
+
+        // Validate fields
+        const cleanFields = fields.map(f => f.trim()).filter(f => f);
+        if (!cleanFields.length) {
+          alert("Please add at least one field with a label.");
+          return;
+        }
+
+        // Save structure
+        const templateData = {
+          label: name,
+          fields: cleanFields,
+          version: 1
+        };
+
+        try {
+          await set(templateRef, templateData);
+          document.getElementById('confirmation').textContent = "Template saved successfully!";
+          fields = [""];
+          renderFields();
+          document.getElementById('template-name').value = "";
+        } catch (err) {
+          document.getElementById('confirmation').textContent = "";
+          alert("Error saving template: " + err.message);
+        }
+      };
+    });
+  </script>
+  <style>
+    body { background: #f6f7fa; font-family: sans-serif; }
+    label { margin-top:0.7em; display:block; }
+    input[type="text"] { padding:0.4em; border-radius:4px; border:1px solid #ccc; }
+    button { background:#0366d6; color:#fff; border:none; border-radius:4px; padding:0.4em 1em; cursor:pointer;}
+    button[type="button"] { background:#666; }
+    button:disabled { background:#bbb; cursor:default;}
+    #main-container { box-sizing:border-box; }
+  </style>
+</head>
+<body>
+</body>
+</html>

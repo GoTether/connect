@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tether</title>
+  <script type="module">
+    import { database } from './firebase-init.js';
+    import { ref, get } from "firebase/database";
+
+    // Utility to get query params
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const id = getQueryParam('id');
+      const welcomeDiv = document.getElementById('welcome');
+
+      if (!id) {
+        // Show welcome message and skip the rest
+        welcomeDiv.style.display = 'block';
+        return;
+      }
+
+      // Hide welcome message (if present)
+      if (welcomeDiv) welcomeDiv.style.display = 'none';
+
+      // Check Firebase for tethers/{id}
+      try {
+        const tetherRef = ref(database, `tethers/${id}`);
+        const snapshot = await get(tetherRef);
+        // Redirect to display.html?id={id} regardless of data existence
+        window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+      } catch (error) {
+        // On error, still redirect
+        window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+      }
+    });
+  </script>
+</head>
+<body>
+  <div id="welcome" style="display:none;">
+    <h2>Welcome to Tether!</h2>
+    <p>Start by providing an <code>id</code> in the URL to view or create a tether.</p>
+  </div>
+</body>
+</html>
