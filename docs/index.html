@@ -5,17 +5,14 @@
   <title>Tether</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Tether links the physical world to digital memory. Scan to log, track, and tell stories.">
-  <!-- No favicon to avoid 404 -->
-  <!-- Firebase CDN scripts (can be omitted if not needed in index.html) -->
-  <!--
+  <!-- Firebase CDN scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  -->
 </head>
 <body>
   <div id="welcome" role="main" aria-live="polite" style="display:none">
     <h2>Welcome to Tether!</h2>
-    <p>Start by providing an <code>id</code> in the URL to view or create a tether.</p>
+    <p>Scan or enter a code to interact with a Terra Tether, or create a new one.</p>
     <p>If you think you should see a page here, check your URL and try again.</p>
     <p><a href="https://github.com/GoTether/connect">Project GitHub</a></p>
   </div>
@@ -23,27 +20,50 @@
     <p style="color: red;">JavaScript is required to use Tether. Please enable JavaScript in your browser.</p>
   </noscript>
   <script>
-    // Get query param from URL
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const id = getQueryParam('id');
       const welcomeDiv = document.getElementById('welcome');
 
       if (!id) {
-        // Show welcome message, do not redirect
+        // Show welcome landing
         welcomeDiv.style.display = 'block';
         return;
       }
 
-      // Hide welcome message if id is present
-      if (welcomeDiv) welcomeDiv.style.display = 'none';
-
-      // Redirect to display.html with the id
-      window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+      // Check if id exists in Firebase
+      try {
+        const tetherRef = database.ref('tethers/' + id);
+        const snap = await tetherRef.get();
+        if (snap.exists()) {
+          // Tether exists, go to display
+          window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+        } else {
+          // Tether does NOT exist, go to setup
+          window.location.href = `setup.html?id=${encodeURIComponent(id)}`;
+        }
+      } catch (e) {
+        // On error, show welcome
+        welcomeDiv.style.display = 'block';
+      }
     });
   </script>
 </body>
