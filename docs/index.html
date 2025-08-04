@@ -5,11 +5,12 @@
   <title>Tether</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Tether links the physical world to digital memory. Scan to log, track, and tell stories.">
-  <!-- <link rel="icon" href="favicon.ico"> -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline';">
-  <!-- Firebase CDN scripts -->
+  <!-- No favicon to avoid 404 -->
+  <!-- Firebase CDN scripts (can be omitted if not needed in index.html) -->
+  <!--
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  -->
 </head>
 <body>
   <div id="welcome" role="main" aria-live="polite" style="display:none">
@@ -22,28 +23,13 @@
     <p style="color: red;">JavaScript is required to use Tether. Please enable JavaScript in your browser.</p>
   </noscript>
   <script>
-    // Your Firebase config (replace with yours if needed)
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-
-    // Utility to get query params
+    // Get query param from URL
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
       const id = getQueryParam('id');
       const welcomeDiv = document.getElementById('welcome');
 
@@ -56,7 +42,7 @@
       // Hide welcome message if id is present
       if (welcomeDiv) welcomeDiv.style.display = 'none';
 
-      // Always redirect to display.html with the id
+      // Redirect to display.html with the id
       window.location.href = `display.html?id=${encodeURIComponent(id)}`;
     });
   </script>
