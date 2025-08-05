@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Setup Terra Tether</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Firebase CDN scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <div id="main" style="max-width:500px;margin:2em auto;padding:2em;background:#fff;border-radius:10px;box-shadow:0 2px 8px #ccc;">
+    <h2>Setup Terra Tether</h2>
+    <div id="content">
+      <p>Loading templates...</p>
+    </div>
+  </div>
+  <script>
+    // Firebase config (replace if needed)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    function getQueryParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    async function fetchTemplates() {
+      const snap = await database.ref('global_templates').get();
+      if (!snap.exists()) return [];
+      const raw = snap.val();
+      return Object.entries(raw).map(([key, val]) => ({
+        key,
+        label: val.label || key,
+        fields: Array.isArray(val.fields) ? val.fields : [],
+        version: val.version ?? null
+      }));
+    }
+
+    async function setupPage() {
+      const id = getQueryParam('id');
+      const contentDiv = document.getElementById('content');
+
+      if (!id) {
+        contentDiv.innerHTML = `<p style="color:red;">No tether id provided. Return to <a href="index.html">home page</a>.</p>`;
+        return;
+      }
+
+      // Fetch templates
+      const templates = await fetchTemplates();
+
+      if (!templates.length) {
+        contentDiv.innerHTML = `
+          <p style="color:red;">No templates found in the database.</p>
+          <p><a href="templatecreator.html" style="font-weight:bold;">Create a new template</a></p>
+        `;
+        return;
+      }
+
+      // Template selection UI
+      let html = `<form id="setup-form">
+        <label for="template-select"><strong>Select a Template:</strong></label><br>
+        <select id="template-select" required style="font-size:1.1em;padding:0.4em;margin-bottom:1em;">
+          <option value="">-- Choose a template --</option>
+          ${templates.map(t => `<option value="${t.key}">${t.label} (${t.key})</option>`).join('')}
+        </select><br>
+        <button type="submit" style="font-size:1.1em;padding:0.5em 1.5em;">Create Tether</button>
+      </form>
+      <div id="setup-status" style="margin-top:1em;color:green;font-weight:bold;"></div>`;
+      contentDiv.innerHTML = html;
+
+      document.getElementById('setup-form').onsubmit = async function(e) {
+        e.preventDefault();
+        const templateKey = document.getElementById('template-select').value;
+        if (!templateKey) {
+          alert('Please select a template.');
+          return;
+        }
+        // Save new tether to Firebase
+        try {
+          await database.ref('tethers/' + id).set({
+            log_scope: "Terra",
+            template: templateKey,
+            template_version: templates.find(t => t.key === templateKey).version || null,
+            static_fields: {}
+          });
+          document.getElementById('setup-status').textContent = "Tether created! Redirecting...";
+          setTimeout(() => {
+            window.location.href = `display.html?id=${encodeURIComponent(id)}`;
+          }, 1200);
+        } catch (err) {
+          document.getElementById('setup-status').textContent = "";
+          alert("Error creating tether: " + err.message);
+        }
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', setupPage);
+  </script>
+</body>
+</html>
