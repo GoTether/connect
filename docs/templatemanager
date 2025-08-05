@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Template Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+    #main { max-width: 700px; margin: 2em auto; background: #fff; padding: 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5em; }
+    .page-title { font-size: 2em; font-weight: bold; color: #2b90ff; letter-spacing: 0.03em; }
+    .admin-btn { background: #e74c3c; color: #fff; border: none; border-radius: 8px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 6px #f6d9d7; }
+    .admin-btn:hover { background: #c0392b; }
+    .template-count { font-size: 1.05em; color: #222; background: #f2f6fa; border-radius: 8px; padding: 0.5em 1.2em; margin-bottom: 1.5em; display: inline-block; }
+    .search-bar { width: 100%; margin-bottom: 1.5em; }
+    .search-input { width: 100%; font-size: 1.15em; padding: 0.7em; border-radius: 8px; border: 1px solid #d5dbe7; margin-bottom: 0.7em; }
+    .template-list { display: flex; flex-direction: column; gap: 1.2em; }
+    .template-card { background: #f2f6fa; border-radius: 12px; padding: 1.3em 1.2em; box-shadow: 0 2px 8px #e0e4eb; display: flex; flex-direction: column; gap: 0.5em; position: relative;}
+    .template-name-row { display: flex; align-items: center; gap: 1em; }
+    .template-name { font-size: 1.25em; font-weight: bold; color: #222; flex: 1; }
+    .template-key { font-size: 0.95em; color: #999; margin-left: 0.4em; }
+    .template-actions { display: flex; gap: 0.4em; margin-top: 0.8em; }
+    .action-btn { background: #2b90ff; color: #fff; border: none; border-radius: 8px; padding: 0.5em 1.2em; font-size: 1em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; }
+    .action-btn:hover { background: #176fd2; }
+    .delete-btn { background: #e74c3c; }
+    .delete-btn:hover { background: #c0392b; }
+    .rename-btn { background: #f39c12; }
+    .rename-btn:hover { background: #c87c09; }
+    .save-btn { background: #27ae60; }
+    .save-btn:hover { background: #1a7342; }
+    .cancel-btn { background: #777; }
+    .cancel-btn:hover { background: #444; }
+    .field-count, .section-count { font-size: 0.95em; color: #666; margin-right: 1em; }
+    .last-updated { font-size: 0.92em; color: #bbb; margin-right: 1em; }
+    .error-message { color: #e74c3c; margin-bottom: 1em; font-weight: bold; }
+    .modal-bg { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.35); z-index:9999; display:flex; justify-content:center; align-items:center;}
+    .modal { background:#fff; border-radius:12px; padding:2em 2em; box-shadow:0 2px 12px #bbb; font-size:1.1em; }
+    .modal button { margin:1em 0.5em 0 0; }
+    @media (max-width: 600px) {
+      #main { padding: 1em; }
+      .header-row { flex-direction: column; gap: 1em;}
+      .template-card { padding: 1em; }
+    }
+  </style>
+</head>
+<body>
+<div id="main">
+  <div class="header-row">
+    <span class="page-title">Template Manager</span>
+    <button class="admin-btn" id="exit-admin-btn">Back to Admin</button>
+  </div>
+  <div id="template-count" class="template-count">Templates: 0</div>
+  <div class="search-bar">
+    <input type="text" class="search-input" id="search-input" placeholder="Search templates...">
+  </div>
+  <div id="error-message" class="error-message"></div>
+  <div id="template-list" class="template-list"></div>
+</div>
+<!-- Modal for delete confirmation -->
+<div id="modal-bg" class="modal-bg" style="display:none;">
+  <div class="modal" id="modal-content">
+    <div id="modal-message"></div>
+    <button id="modal-confirm-btn" class="delete-btn">Delete</button>
+    <button id="modal-cancel-btn" class="cancel-btn">Cancel</button>
+  </div>
+</div>
+<script>
+window.onerror = function (msg, url, line, col, error) {
+  document.getElementById('error-message').textContent =
+    "JS Error: " + msg + " (Line: " + line + ", Col: " + col + ")";
+};
+
+// --- Firebase Setup ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+  authDomain: "tether-71e0c.firebaseapp.com",
+  databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+  projectId: "tether-71e0c",
+  storageBucket: "tether-71e0c.appspot.com",
+  messagingSenderId: "277809008742",
+  appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+  measurementId: "G-X7ZQ6DJYEN"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// --- Page State ---
+let allTemplates = [];
+let filteredTemplates = [];
+let currentRenameKey = null;
+let currentRenameValue = "";
+let currentDeleteKey = null;
+
+// --- Fetch & Render ---
+async function fetchTemplates() {
+  try {
+    const snapshot = await database.ref("global_templates").get();
+    if (!snapshot.exists()) {
+      allTemplates = [];
+      filteredTemplates = [];
+      renderTemplates();
+      updateTemplateCount();
+      return;
+    }
+    allTemplates = Object.values(snapshot.val());
+    filteredTemplates = allTemplates;
+    renderTemplates();
+    updateTemplateCount();
+  } catch (err) {
+    document.getElementById("error-message").textContent = "Error fetching templates: " + err.message;
+  }
+}
+fetchTemplates();
+
+function updateTemplateCount() {
+  const count = allTemplates.length;
+  document.getElementById("template-count").textContent = `Templates: ${count}`;
+}
+
+// --- Search ---
+document.getElementById("search-input").addEventListener("input", function() {
+  const q = this.value.trim().toLowerCase();
+  filteredTemplates = q
+    ? allTemplates.filter(t => (t.label || "").toLowerCase().includes(q) || (t.key || "").toLowerCase().includes(q))
+    : allTemplates;
+  renderTemplates();
+});
+
+// --- Render ---
+function renderTemplates() {
+  const list = document.getElementById("template-list");
+  list.innerHTML = "";
+  if (!filteredTemplates.length) {
+    list.innerHTML = `<div style="color:#999;text-align:center; font-size:1.1em; margin-top:2em;">No templates found.</div>`;
+    return;
+  }
+  filteredTemplates.forEach(template => {
+    const div = document.createElement("div");
+    div.className = "template-card";
+
+    // If in rename mode for this template
+    if (currentRenameKey === template.key) {
+      div.innerHTML = `
+        <div class="template-name-row">
+          <input type="text" id="rename-input-${template.key}" value="${currentRenameValue}" style="font-size:1.18em;padding:0.3em 0.6em;width:70%;">
+          <span class="template-key">${template.key}</span>
+        </div>
+        <div class="template-actions">
+          <button class="save-btn" id="save-rename-btn-${template.key}">Save</button>
+          <button class="cancel-btn" id="cancel-rename-btn-${template.key}">Cancel</button>
+        </div>
+        <div id="rename-error-${template.key}" class="error-message"></div>
+      `;
+      list.appendChild(div);
+
+      document.getElementById(`save-rename-btn-${template.key}`).onclick = () => renameTemplate(template.key);
+      document.getElementById(`cancel-rename-btn-${template.key}`).onclick = () => cancelRename();
+      document.getElementById(`rename-input-${template.key}`).addEventListener("keydown", function(e){
+        if(e.key === "Enter") document.getElementById(`save-rename-btn-${template.key}`).click();
+      });
+    } else {
+      // Normal card
+      const sectionCount = template.sections ? template.sections.length : 0;
+      const fieldCount = template.sections ? template.sections.reduce((sum, s) => sum + (s.fields?s.fields.length:0), 0) : 0;
+      const lastUpdated = template.lastUpdated ? new Date(template.lastUpdated).toLocaleString() : "";
+
+      div.innerHTML = `
+        <div class="template-name-row">
+          <span class="template-name">${template.label || "(no label)"}</span>
+          <span class="template-key">${template.key}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
+          <span class="section-count">Sections: ${sectionCount}</span>
+          <span class="field-count">Fields: ${fieldCount}</span>
+          ${lastUpdated ? `<span class="last-updated">Last updated: ${lastUpdated}</span>` : ""}
+        </div>
+        <div class="template-actions">
+          <button class="action-btn" id="view-btn-${template.key}">View/Edit</button>
+          <button class="rename-btn action-btn" id="rename-btn-${template.key}">Rename</button>
+          <button class="delete-btn action-btn" id="delete-btn-${template.key}">Delete</button>
+        </div>
+        <div id="card-error-${template.key}" class="error-message"></div>
+      `;
+      list.appendChild(div);
+
+      document.getElementById(`view-btn-${template.key}`).onclick = () => {
+        window.location.href = `templatecreator.html?key=${encodeURIComponent(template.key)}`;
+      };
+      document.getElementById(`rename-btn-${template.key}`).onclick = () => startRename(template.key, template.label);
+      document.getElementById(`delete-btn-${template.key}`).onclick = () => showDeleteModal(template.key, template.label);
+    }
+  });
+}
+
+// --- Rename ---
+function startRename(key, label) {
+  currentRenameKey = key;
+  currentRenameValue = label;
+  renderTemplates();
+}
+function cancelRename() {
+  currentRenameKey = null;
+  currentRenameValue = "";
+  renderTemplates();
+}
+async function renameTemplate(key) {
+  const input = document.getElementById(`rename-input-${key}`);
+  const newLabel = input.value.trim();
+  if (!newLabel) {
+    document.getElementById(`rename-error-${key}`).textContent = "Template name required.";
+    return;
+  }
+  // Uniqueness check
+  if (allTemplates.some(t => t.label === newLabel && t.key !== key)) {
+    document.getElementById(`rename-error-${key}`).textContent = "Another template already has this name.";
+    return;
+  }
+  try {
+    await database.ref("global_templates/" + key + "/label").set(newLabel);
+    currentRenameKey = null;
+    currentRenameValue = "";
+    await fetchTemplates();
+  } catch(err) {
+    document.getElementById(`rename-error-${key}`).textContent = "Error renaming: " + err.message;
+  }
+}
+
+// --- Delete ---
+function showDeleteModal(key, label) {
+  currentDeleteKey = key;
+  document.getElementById("modal-message").innerHTML =
+    `Delete template <b>${label}</b>? This cannot be undone.`;
+  document.getElementById("modal-bg").style.display = "flex";
+}
+document.getElementById("modal-confirm-btn").onclick = async function() {
+  if (!currentDeleteKey) return;
+  try {
+    await database.ref("global_templates/" + currentDeleteKey).remove();
+    currentDeleteKey = null;
+    hideModal();
+    await fetchTemplates();
+  } catch(err) {
+    document.getElementById("error-message").textContent = "Error deleting template: " + err.message;
+    hideModal();
+  }
+};
+document.getElementById("modal-cancel-btn").onclick = function() {
+  hideModal();
+};
+function hideModal() {
+  document.getElementById("modal-bg").style.display = "none";
+  currentDeleteKey = null;
+}
+
+// --- Back to admin ---
+document.getElementById("exit-admin-btn").onclick = function() {
+  window.location.href = "/admin.html";
+};
+</script>
+</body>
+</html>
