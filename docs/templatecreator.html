@@ -115,6 +115,15 @@ function generateKey(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
 }
 
+// Add Enter-to-save for template name input
+const templateNameInput = document.getElementById("template-name");
+templateNameInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    document.getElementById("start-btn").click();
+  }
+});
+
 // STEP 1: Name
 document.getElementById("start-btn").onclick = async function() {
   const nameInput = document.getElementById("template-name").value.trim();
@@ -172,6 +181,15 @@ function showSectionForm(insertIdx = null) {
       <div id="section-form-error" class="error-message"></div>
     </form>
   `;
+
+  // Add enter-to-save for new section name input
+  formDiv.querySelector("#new-section-name").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      formDiv.querySelector("#new-section-save-btn").click();
+    }
+  });
+
   if (insertIdx === null || insertIdx >= sections.length) {
     list.appendChild(formDiv);
   } else {
@@ -227,6 +245,15 @@ function showEditSectionForm(sectionIdx) {
       <div id="edit-section-error-${sectionIdx}" class="error-message"></div>
     </form>
   `;
+
+  // Add enter-to-save for edit section name input
+  wrap.querySelector(`#edit-section-name-${sectionIdx}`).addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      wrap.querySelector("button[type=submit]").click();
+    }
+  });
+
   document.getElementById(`edit-section-form-${sectionIdx}`).onsubmit = function(e) {
     e.preventDefault();
     const name = document.getElementById(`edit-section-name-${sectionIdx}`).value.trim();
