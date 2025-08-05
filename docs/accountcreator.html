@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Account (Tether)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0; }
+    #main { max-width: 480px; margin: 3em auto; background: #fff; padding: 2em 2em 2em 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
+    .header { font-size: 2em; font-weight: bold; margin-bottom: 0.4em; color: #2b90ff; }
+    .subtitle { color: #666; margin-bottom: 1.4em; font-size: 1.13em; }
+    .form-group { margin-bottom: 1.3em; }
+    .label { font-size: 1em; font-weight: 500; color:#333; margin-bottom:0.3em; display:block; }
+    .input { width: 100%; font-size: 1.13em; padding: 0.7em; border-radius: 7px; border: 1px solid #bbb; margin-top: 0.13em;}
+    .btn { background: #2b90ff; color: #fff; border: none; border-radius: 8px; padding: 0.7em 2em; font-size: 1.13em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; margin-top:0.7em;}
+    .btn:hover { background: #176fd2;}
+    .error-message { color: #e74c3c; font-weight: bold; margin-top: 0.7em;}
+    .success-message { color: #27ae60; font-weight: bold; margin-top: 0.7em;}
+    @media (max-width: 600px) { #main { padding: 1em; } }
+  </style>
+</head>
+<body>
+<div id="main">
+  <div class="header">Create New Account</div>
+  <div class="subtitle">
+    Enter the user's name and (optionally) email address.<br>
+    Accounts are used for personal diaries, entries, and tether management.
+  </div>
+  <form id="account-form">
+    <div class="form-group">
+      <label class="label" for="name">Full Name <span style="color:#e74c3c">*</span></label>
+      <input class="input" type="text" id="name" required autocomplete="off" placeholder="e.g. Jane Doe">
+    </div>
+    <div class="form-group">
+      <label class="label" for="email">Email Address <span style="color:#aaa">(optional)</span></label>
+      <input class="input" type="email" id="email" autocomplete="off" placeholder="e.g. jane@email.com">
+    </div>
+    <button class="btn" type="submit">Create Account</button>
+    <div id="status"></div>
+  </form>
+</div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+  authDomain: "tether-71e0c.firebaseapp.com",
+  databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+  projectId: "tether-71e0c",
+  storageBucket: "tether-71e0c.appspot.com",
+  messagingSenderId: "277809008742",
+  appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+  measurementId: "G-X7ZQ6DJYEN"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+document.getElementById("account-form").onsubmit = function(e) {
+  e.preventDefault();
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const status = document.getElementById("status");
+  status.textContent = "";
+  status.className = "";
+  if (!name) {
+    status.textContent = "Name is required.";
+    status.className = "error-message";
+    return;
+  }
+  // Generate a UUID for userId
+  function uuidv4() { return 'u' + ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c=>
+    (c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)
+  ); }
+  const userId = uuidv4();
+  // Account object
+  const account = {
+    name: name,
+    email: email || null,
+    created_at: Date.now()
+  };
+  database.ref("accounts/" + userId).set(account)
+    .then(() => {
+      status.textContent = "Account created successfully!";
+      status.className = "success-message";
+      document.getElementById("account-form").reset();
+    })
+    .catch(err => {
+      status.textContent = "Error: " + err.message;
+      status.className = "error-message";
+    });
+};
+</script>
+</body>
+</html>
