@@ -2,86 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Template Manager</title>
+  <title>Template Manager (Tether)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
-    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-    #main { max-width: 700px; margin: 2em auto; background: #fff; padding: 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
-    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5em; }
-    .page-title { font-size: 2em; font-weight: bold; color: #2b90ff; letter-spacing: 0.03em; }
-    .admin-btn { background: #e74c3c; color: #fff; border: none; border-radius: 8px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 6px #f6d9d7; }
+    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0; }
+    #main { max-width: 950px; margin: 2em auto; background: #fff; padding: 2em 2em 3em 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
+    .header { font-size: 2em; font-weight: bold; margin-bottom: 0.4em; color: #2b90ff; }
+    .subtitle { color: #666; margin-bottom: 1.3em; font-size: 1.15em; }
+    .admin-btn { background: #e74c3c; color: #fff; border: none; border-radius: 8px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 6px #f6d9d7; margin-top:0.3em; margin-right:0.7em;}
     .admin-btn:hover { background: #c0392b; }
-    .template-count { font-size: 1.05em; color: #222; background: #f2f6fa; border-radius: 8px; padding: 0.5em 1.2em; margin-bottom: 1.5em; display: inline-block; }
-    .search-bar { width: 100%; margin-bottom: 1.5em; }
-    .search-input { width: 100%; font-size: 1.15em; padding: 0.7em; border-radius: 8px; border: 1px solid #d5dbe7; margin-bottom: 0.7em; }
-    .template-list { display: flex; flex-direction: column; gap: 1.2em; }
-    .template-card { background: #f2f6fa; border-radius: 12px; padding: 1.3em 1.2em; box-shadow: 0 2px 8px #e0e4eb; display: flex; flex-direction: column; gap: 0.5em; position: relative;}
-    .template-name-row { display: flex; align-items: center; gap: 1em; }
-    .template-name { font-size: 1.25em; font-weight: bold; color: #222; flex: 1; }
-    .template-key { font-size: 0.95em; color: #999; margin-left: 0.4em; }
-    .template-actions { display: flex; gap: 0.4em; margin-top: 0.8em; }
-    .action-btn { background: #2b90ff; color: #fff; border: none; border-radius: 8px; padding: 0.5em 1.2em; font-size: 1em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; }
-    .action-btn:hover { background: #176fd2; }
-    .delete-btn { background: #e74c3c; }
+    .search-bar { width: 100%; max-width: 340px; font-size: 1.15em; padding: 0.7em; border-radius: 7px; border: 1px solid #bbb; margin-bottom: 2em; }
+    .template-list { margin-top: 1em; }
+    .template-card { background: #f2f6fa; border-radius: 12px; margin-bottom: 1.5em; padding: 1.6em 2em; box-shadow: 0 2px 7px #e0e4eb; position: relative; display: flex; flex-direction: column; gap: 0.8em;}
+    .template-label { font-size: 1.3em; font-weight: bold; color: #2b90ff; }
+    .template-key { color: #aaa; word-break: break-all;}
+    .template-actions { margin-top: 0.7em; display: flex; gap: 0.7em;}
+    .action-btn { background: #2b90ff; color: #fff; border: none; border-radius: 7px; padding: 0.5em 1em; font-size: 1em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; }
+    .action-btn:hover:not(:disabled) { background: #176fd2;}
+    .delete-btn { background: #e74c3c; color: #fff; }
     .delete-btn:hover { background: #c0392b; }
-    .rename-btn { background: #f39c12; }
-    .rename-btn:hover { background: #c87c09; }
-    .save-btn { background: #27ae60; }
-    .save-btn:hover { background: #1a7342; }
-    .cancel-btn { background: #777; }
-    .cancel-btn:hover { background: #444; }
-    .field-count, .section-count { font-size: 0.95em; color: #666; margin-right: 1em; }
-    .last-updated { font-size: 0.92em; color: #bbb; margin-right: 1em; }
-    .error-message { color: #e74c3c; margin-bottom: 1em; font-weight: bold; white-space: pre-line; }
-    .modal-bg { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.35); z-index:9999; display:flex; justify-content:center; align-items:center;}
-    .modal { background:#fff; border-radius:12px; padding:2em 2em; box-shadow:0 2px 12px #bbb; font-size:1.1em; }
-    .modal button { margin:1em 0.5em 0 0; }
-    .input-block { padding: 1.5em; background: #f2f6fa; border-radius: 12px; margin-bottom: 2em; box-shadow: 0 2px 7px #e4e8ef; }
-    @media (max-width: 600px) {
-      #main { padding: 1em; }
-      .header-row { flex-direction: column; gap: 1em;}
-      .template-card { padding: 1em; }
-    }
+    .rename-form { display: flex; gap: 0.5em; margin-top:0.6em;}
+    .rename-input { font-size: 1em; padding: 0.4em; border-radius: 6px; border: 1px solid #bbb;}
+    .rename-btn, .cancel-rename-btn { background: #27ae60; color: #fff; border: none; border-radius: 7px; padding: 0.3em 1em; font-size: 1em; cursor: pointer;}
+    .cancel-rename-btn { background: #e74c3c;}
+    .rename-btn:hover { background: #1a7342;}
+    .cancel-rename-btn:hover { background: #c0392b;}
+    .error-message { color: #e74c3c; font-weight: bold; margin-top: 0.7em;}
+    .success-message { color: #27ae60; font-weight: bold; margin-top: 0.7em;}
+    .upload-block { background: #f6fdfc; border-radius: 12px; padding: 2em; margin-bottom: 2em; box-shadow: 0 2px 8px #e0f6f2;}
+    .upload-label { font-size: 1.13em; font-weight: 500; margin-bottom: 0.6em;}
+    .upload-btn { background: #2b90ff; color: #fff; border: none; border-radius: 7px; padding: 0.7em 2em; font-size: 1.1em; cursor: pointer; }
+    .upload-btn:hover { background: #176fd2;}
+    .upload-status { margin-top: 1em; }
+    .upload-tip { color:#666; font-size:1em; margin-top:0.2em;}
+    @media (max-width: 700px) { #main { padding: 1em; } .template-card { padding: 1em; } .upload-block { padding: 1em; } }
   </style>
 </head>
 <body>
 <div id="main">
-  <div class="header-row">
-    <span class="page-title">Template Manager</span>
-    <button class="admin-btn" id="exit-admin-btn">Back to Admin</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <span class="header">Template Manager</span>
+    <button class="admin-btn" onclick="window.location.href='/connect/admin.html'">Back to Admin</button>
   </div>
-  <div id="bulk-upload-area" class="input-block" style="margin-bottom:2em;">
-    <div style="font-size:1.2em;font-weight:bold;margin-bottom:0.5em;">Bulk Upload Templates</div>
-    <input type="file" id="bulk-upload-input" accept=".json" multiple>
-    <button id="bulk-upload-preview-btn">Preview Upload</button>
-    <button id="bulk-upload-import-btn" style="display:none;">Import to Database</button>
-    <div id="bulk-upload-preview"></div>
-    <div id="bulk-upload-error" class="error-message"></div>
+  <div class="subtitle">
+    Search, view, rename, delete and <b>bulk upload</b> templates.<br>
+    <span style="color:#2b90ff;">Bulk upload now supports multiple templates in a single JSON file!</span>
   </div>
-  <div id="template-count" class="template-count">Templates: 0</div>
-  <div class="search-bar">
-    <input type="text" class="search-input" id="search-input" placeholder="Search templates...">
+  <div class="upload-block">
+    <div class="upload-label">Bulk Upload Templates</div>
+    <input type="file" id="upload-input" accept=".json">
+    <button class="upload-btn" id="upload-btn">Upload</button>
+    <div class="upload-tip">
+      Upload a single JSON file containing one template object, or an array of template objects.<br>
+      <b>Each template must follow the required structure:</b> <i>key, label, sections[], version</i>.<br>
+      <span style="color:#e74c3c;">Each template will be imported under <b>global_templates/{key}</b>.</span>
+    </div>
+    <div id="upload-status" class="upload-status"></div>
   </div>
-  <div id="error-message" class="error-message"></div>
+  <input type="text" class="search-bar" id="search-bar" placeholder="Search templates...">
   <div id="template-list" class="template-list"></div>
 </div>
-<!-- Modal for delete confirmation -->
-<div id="modal-bg" class="modal-bg" style="display:none;">
-  <div class="modal" id="modal-content">
-    <div id="modal-message"></div>
-    <button id="modal-confirm-btn" class="delete-btn">Delete</button>
-    <button id="modal-cancel-btn" class="cancel-btn">Cancel</button>
-  </div>
-</div>
 <script>
-window.onerror = function (msg, url, line, col, error) {
-  document.getElementById('error-message').textContent =
-    "JS Error: " + msg + " (Line: " + line + ", Col: " + col + ")";
-};
-
-// --- Firebase Setup ---
 const firebaseConfig = {
   apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
   authDomain: "tether-71e0c.firebaseapp.com",
@@ -95,232 +78,172 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// --- Page State ---
-let allTemplates = [];
+let templates = []; // {key, label, sections, version}
 let filteredTemplates = [];
-let currentRenameKey = null;
-let currentRenameValue = "";
-let currentDeleteKey = null;
+let renameMode = {}; // key: true/false
 
-// --- Bulk Upload ---
-let bulkTemplates = [];
-document.getElementById("bulk-upload-preview-btn").onclick = async function() {
-  const input = document.getElementById("bulk-upload-input");
-  document.getElementById("bulk-upload-error").textContent = "";
-  bulkTemplates = [];
-  document.getElementById("bulk-upload-preview").innerHTML = "";
-  document.getElementById("bulk-upload-import-btn").style.display = "none";
-  if (!input.files.length) {
-    document.getElementById("bulk-upload-error").textContent = "Please select at least one .json file.";
-    return;
-  }
-  let previewHtml = "";
-  for (let file of input.files) {
-    try {
-      const text = await file.text();
-      const template = JSON.parse(text);
-      // Basic validation
-      if (!template.key || !template.label || !Array.isArray(template.sections)) {
-        throw new Error("Invalid template structure in " + file.name);
-      }
-      bulkTemplates.push(template);
-      previewHtml += `<div style="border:1px solid #2b90ff;border-radius:8px;padding:1em;margin-bottom:1em;">
-          <b>${template.label}</b> <span style="color:#999;">(${template.key})</span><br>
-          Sections: ${template.sections.length}
-        </div>`;
-    } catch (err) {
-      document.getElementById("bulk-upload-error").textContent += `Error in ${file.name}: ${err.message}\n`;
-    }
-  }
-  if (bulkTemplates.length) {
-    document.getElementById("bulk-upload-preview").innerHTML = previewHtml;
-    document.getElementById("bulk-upload-import-btn").style.display = "";
-  }
-};
-
-document.getElementById("bulk-upload-import-btn").onclick = async function() {
-  if (!bulkTemplates.length) return;
-  document.getElementById("bulk-upload-error").textContent = "";
-  let errorCount = 0;
-  for (const template of bulkTemplates) {
-    try {
-      await firebase.database().ref("global_templates/" + template.key).set(template);
-    } catch (err) {
-      errorCount++;
-      document.getElementById("bulk-upload-error").textContent += `Error importing ${template.label}: ${err.message}\n`;
-    }
-  }
-  if (errorCount === 0) {
-    document.getElementById("bulk-upload-error").textContent = "Import successful!";
-    await fetchTemplates();
-  }
-};
-
-// --- Fetch & Render ---
-async function fetchTemplates() {
-  try {
-    const snapshot = await database.ref("global_templates").get();
-    if (!snapshot.exists()) {
-      allTemplates = [];
-      filteredTemplates = [];
-      renderTemplates();
-      updateTemplateCount();
-      return;
-    }
-    allTemplates = Object.values(snapshot.val());
-    filteredTemplates = allTemplates;
+function fetchTemplates() {
+  database.ref('global_templates').get().then(snap => {
+    templates = [];
+    snap.forEach(child => {
+      const val = child.val();
+      if (val && val.key && val.label) templates.push(val);
+    });
     renderTemplates();
-    updateTemplateCount();
-  } catch (err) {
-    document.getElementById("error-message").textContent = "Error fetching templates: " + err.message;
-  }
-}
-fetchTemplates();
-
-function updateTemplateCount() {
-  const count = allTemplates.length;
-  document.getElementById("template-count").textContent = `Templates: ${count}`;
-}
-
-// --- Search ---
-document.getElementById("search-input").addEventListener("input", function() {
-  const q = this.value.trim().toLowerCase();
-  filteredTemplates = q
-    ? allTemplates.filter(t => (t.label || "").toLowerCase().includes(q) || (t.key || "").toLowerCase().includes(q))
-    : allTemplates;
-  renderTemplates();
-});
-
-// --- Render ---
-function renderTemplates() {
-  const list = document.getElementById("template-list");
-  list.innerHTML = "";
-  if (!filteredTemplates.length) {
-    list.innerHTML = `<div style="color:#999;text-align:center; font-size:1.1em; margin-top:2em;">No templates found.</div>`;
-    return;
-  }
-  filteredTemplates.forEach(template => {
-    const div = document.createElement("div");
-    div.className = "template-card";
-
-    // If in rename mode for this template
-    if (currentRenameKey === template.key) {
-      div.innerHTML = `
-        <div class="template-name-row">
-          <input type="text" id="rename-input-${template.key}" value="${currentRenameValue}" style="font-size:1.18em;padding:0.3em 0.6em;width:70%;">
-          <span class="template-key">${template.key}</span>
-        </div>
-        <div class="template-actions">
-          <button class="save-btn" id="save-rename-btn-${template.key}">Save</button>
-          <button class="cancel-btn" id="cancel-rename-btn-${template.key}">Cancel</button>
-        </div>
-        <div id="rename-error-${template.key}" class="error-message"></div>
-      `;
-      list.appendChild(div);
-
-      document.getElementById(`save-rename-btn-${template.key}`).onclick = () => renameTemplate(template.key);
-      document.getElementById(`cancel-rename-btn-${template.key}`).onclick = () => cancelRename();
-      document.getElementById(`rename-input-${template.key}`).addEventListener("keydown", function(e){
-        if(e.key === "Enter") document.getElementById(`save-rename-btn-${template.key}`).click();
-      });
-    } else {
-      // Normal card
-      const sectionCount = template.sections ? template.sections.length : 0;
-      const fieldCount = template.sections ? template.sections.reduce((sum, s) => sum + (s.fields?s.fields.length:0), 0) : 0;
-      const lastUpdated = template.lastUpdated ? new Date(template.lastUpdated).toLocaleString() : "";
-
-      div.innerHTML = `
-        <div class="template-name-row">
-          <span class="template-name">${template.label || "(no label)"}</span>
-          <span class="template-key">${template.key}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
-          <span class="section-count">Sections: ${sectionCount}</span>
-          <span class="field-count">Fields: ${fieldCount}</span>
-          ${lastUpdated ? `<span class="last-updated">Last updated: ${lastUpdated}</span>` : ""}
-        </div>
-        <div class="template-actions">
-          <button class="action-btn" id="view-btn-${template.key}">View/Edit</button>
-          <button class="rename-btn action-btn" id="rename-btn-${template.key}">Rename</button>
-          <button class="delete-btn action-btn" id="delete-btn-${template.key}">Delete</button>
-        </div>
-        <div id="card-error-${template.key}" class="error-message"></div>
-      `;
-      list.appendChild(div);
-
-      document.getElementById(`view-btn-${template.key}`).onclick = () => {
-        window.location.href = `templatecreator.html?key=${encodeURIComponent(template.key)}`;
-      };
-      document.getElementById(`rename-btn-${template.key}`).onclick = () => startRename(template.key, template.label);
-      document.getElementById(`delete-btn-${template.key}`).onclick = () => showDeleteModal(template.key, template.label);
-    }
   });
 }
 
-// --- Rename ---
-function startRename(key, label) {
-  currentRenameKey = key;
-  currentRenameValue = label;
-  renderTemplates();
-}
-function cancelRename() {
-  currentRenameKey = null;
-  currentRenameValue = "";
-  renderTemplates();
-}
-async function renameTemplate(key) {
-  const input = document.getElementById(`rename-input-${key}`);
-  const newLabel = input.value.trim();
-  if (!newLabel) {
-    document.getElementById(`rename-error-${key}`).textContent = "Template name required.";
+function renderTemplates() {
+  const list = document.getElementById("template-list");
+  const searchVal = document.getElementById("search-bar").value.trim().toLowerCase();
+  filteredTemplates = templates.filter(t =>
+    t.key.toLowerCase().includes(searchVal) ||
+    t.label.toLowerCase().includes(searchVal)
+  );
+  list.innerHTML = "";
+  if (!filteredTemplates.length) {
+    list.innerHTML = `<div style="color:#aaa;margin-top:2em;font-size:1.15em;">No templates found.</div>`;
     return;
   }
-  // Uniqueness check
-  if (allTemplates.some(t => t.label === newLabel && t.key !== key)) {
-    document.getElementById(`rename-error-${key}`).textContent = "Another template already has this name.";
+  filteredTemplates.forEach(t => {
+    const card = document.createElement("div");
+    card.className = "template-card";
+    if (renameMode[t.key]) {
+      // Rename UI
+      card.innerHTML = `
+        <form class="rename-form" id="rename-form-${t.key}">
+          <input type="text" class="rename-input" id="rename-input-${t.key}" value="${t.label}" required>
+          <button type="submit" class="rename-btn">Save</button>
+          <button type="button" class="cancel-rename-btn" id="cancel-rename-btn-${t.key}">Cancel</button>
+        </form>
+        <div class="template-key">${t.key}</div>
+        <div id="rename-error-${t.key}" class="error-message"></div>
+      `;
+      card.querySelector(`#rename-form-${t.key}`).onsubmit = function(e) {
+        e.preventDefault();
+        const newLabel = card.querySelector(`#rename-input-${t.key}`).value.trim();
+        if (!newLabel) {
+          card.querySelector(`#rename-error-${t.key}`).textContent = "Label cannot be empty.";
+          return;
+        }
+        database.ref('global_templates/' + t.key + '/label').set(newLabel).then(() => {
+          t.label = newLabel;
+          renameMode[t.key] = false;
+          renderTemplates();
+        });
+      };
+      card.querySelector(`#cancel-rename-btn-${t.key}`).onclick = function() {
+        renameMode[t.key] = false;
+        renderTemplates();
+      };
+    } else {
+      // Normal UI
+      card.innerHTML = `
+        <span class="template-label">${t.label}</span>
+        <div class="template-key">${t.key}</div>
+        <div class="template-actions">
+          <button class="action-btn" id="rename-btn-${t.key}">Rename</button>
+          <button class="delete-btn action-btn" id="delete-btn-${t.key}">Delete</button>
+        </div>
+      `;
+      card.querySelector(`#rename-btn-${t.key}`).onclick = function() {
+        renameMode[t.key] = true;
+        renderTemplates();
+      };
+      card.querySelector(`#delete-btn-${t.key}`).onclick = function() {
+        if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
+          database.ref('global_templates/' + t.key).remove().then(() => {
+            templates = templates.filter(x => x.key !== t.key);
+            renderTemplates();
+          });
+        }
+      };
+    }
+    list.appendChild(card);
+  });
+}
+
+document.getElementById("search-bar").oninput = renderTemplates;
+
+// --- Bulk Upload Logic ---
+document.getElementById("upload-btn").onclick = function() {
+  const input = document.getElementById("upload-input");
+  document.getElementById("upload-status").textContent = "";
+  if (!input.files[0]) {
+    document.getElementById("upload-status").textContent = "Select a .json file to upload.";
     return;
   }
-  try {
-    await database.ref("global_templates/" + key + "/label").set(newLabel);
-    currentRenameKey = null;
-    currentRenameValue = "";
-    await fetchTemplates();
-  } catch(err) {
-    document.getElementById(`rename-error-${key}`).textContent = "Error renaming: " + err.message;
-  }
-}
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch (err) {
+      document.getElementById("upload-status").textContent = `Error parsing JSON: ${err.message}`;
+      return;
+    }
+    let toImport = [];
+    if (Array.isArray(data)) {
+      toImport = data;
+    } else if (typeof data === "object" && data !== null) {
+      toImport = [data];
+    } else {
+      document.getElementById("upload-status").textContent = `Invalid file structure. Should be an object or array of objects.`;
+      return;
+    }
+    // Validate all templates
+    let errors = [];
+    let imported = [];
+    let promises = [];
+    toImport.forEach((tpl, idx) => {
+      const fname = file.name;
+      let prefix = (toImport.length > 1) ? `Template #${idx+1}` : `Template`;
+      if (!tpl || typeof tpl !== "object") {
+        errors.push(`${prefix} in ${fname}: Not an object.`);
+        return;
+      }
+      // Validate required keys
+      if (!tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
+        errors.push(`${prefix} in ${fname}: Invalid template structure.`);
+        return;
+      }
+      // Validate sections and fields
+      let validSections = true;
+      for (const sec of tpl.sections) {
+        if (!sec.name || !sec.type || typeof sec.undeletable !== "boolean" || !Array.isArray(sec.fields)) {
+          validSections = false; break;
+        }
+        for (const f of sec.fields) {
+          if (!f.name || !f.type || typeof f.static !== "boolean" || typeof f.required !== "boolean") {
+            validSections = false; break;
+          }
+        }
+      }
+      if (!validSections) {
+        errors.push(`${prefix} in ${fname}: Invalid sections or fields structure.`);
+        return;
+      }
+      // All good, push to Firebase
+      promises.push(
+        database.ref('global_templates/' + tpl.key).set(tpl)
+          .then(() => imported.push(tpl.label))
+          .catch(err => errors.push(`${prefix} (${tpl.label}) error: ${err.message}`))
+      );
+    });
+    Promise.all(promises).then(() => {
+      let msg = "";
+      if (imported.length) msg += `Imported: ${imported.join(", ")}. `;
+      if (errors.length) msg += `Errors: ${errors.join(" | ")}`;
+      document.getElementById("upload-status").textContent = msg || "No templates found in file.";
+      fetchTemplates();
+    });
+  };
+  reader.readAsText(file);
+};
 
-// --- Delete ---
-function showDeleteModal(key, label) {
-  currentDeleteKey = key;
-  document.getElementById("modal-message").innerHTML =
-    `Delete template <b>${label}</b>? This cannot be undone.`;
-  document.getElementById("modal-bg").style.display = "flex";
-}
-document.getElementById("modal-confirm-btn").onclick = async function() {
-  if (!currentDeleteKey) return;
-  try {
-    await database.ref("global_templates/" + currentDeleteKey).remove();
-    currentDeleteKey = null;
-    hideModal();
-    await fetchTemplates();
-  } catch(err) {
-    document.getElementById("error-message").textContent = "Error deleting template: " + err.message;
-    hideModal();
-  }
-};
-document.getElementById("modal-cancel-btn").onclick = function() {
-  hideModal();
-};
-function hideModal() {
-  document.getElementById("modal-bg").style.display = "none";
-  currentDeleteKey = null;
-}
-
-// --- Back to admin ---
-document.getElementById("exit-admin-btn").onclick = function() {
-  window.location.href = "/connect/admin.html";
-};
+// Initial fetch
+fetchTemplates();
 </script>
 </body>
 </html>
