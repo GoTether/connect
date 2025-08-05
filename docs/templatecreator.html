@@ -34,7 +34,8 @@
     .toggle-btn { border: none; border-radius: 6px; padding: 0.5em 1.2em; font-size: 1em; cursor: pointer; margin-right: 1em; transition: background 0.2s, color 0.2s; }
     .toggle-yes { background: #27ae60; color: #fff; }
     .toggle-no { background: #e74c3c; color: #fff; }
-    @media (max-width: 700px) { #main { padding: 1em; } .input-block, .card, .preview-block { padding: 1em; } .section-actions { position: static; margin-top:0.7em; } .indented-add-field-btn { margin-left: 0; } }
+    .after-save-btns { margin-top: 2em; display: flex; gap: 1em; }
+    @media (max-width: 700px) { #main { padding: 1em; } .input-block, .card, .preview-block { padding: 1em; } .section-actions { position: static; margin-top:0.7em; } .indented-add-field-btn { margin-left: 0; } .after-save-btns { flex-direction: column; gap: 0.5em; } }
   </style>
 </head>
 <body>
@@ -61,6 +62,10 @@
   <div id="step-preview" class="preview-block" style="display:none;">
     <div class="step-title">Preview your Template</div>
     <div id="preview-content"></div>
+    <div id="after-save-btns" class="after-save-btns" style="display:none;">
+      <button id="create-another-btn">Create Another Template</button>
+      <button id="admin-btn">Go to Admin Page</button>
+    </div>
     <button id="save-template-btn" style="margin-top:2em;">Save Template</button>
     <div id="save-status" class="success-message"></div>
     <button id="edit-btn" style="margin-top:2em;">Go Back & Edit</button>
@@ -143,7 +148,8 @@ function showSectionForm() {
       <div id="section-form-error" class="error-message"></div>
     </form>
   `;
-  list.prepend(formDiv);
+  // Place after the last section card or at end of list
+  list.appendChild(formDiv);
 
   document.getElementById("new-section-form").onsubmit = function(e) {
     e.preventDefault();
@@ -397,6 +403,10 @@ document.getElementById("preview-btn").onclick = function() {
   document.getElementById("builder-area").style.display = "none";
   document.getElementById("step-preview").style.display = "";
   renderPreview();
+  // Reset after-save buttons and show save button again
+  document.getElementById("after-save-btns").style.display = "none";
+  document.getElementById("save-template-btn").style.display = "";
+  document.getElementById("save-status").textContent = "";
 };
 
 function renderPreview() {
@@ -449,10 +459,33 @@ document.getElementById("save-template-btn").onclick = async function() {
   try {
     await templateRef.set(templateData);
     document.getElementById("save-status").textContent = "Template saved! 🎉";
+    document.getElementById("save-template-btn").style.display = "none";
+    document.getElementById("after-save-btns").style.display = "flex";
   } catch (err) {
     document.getElementById("save-status").textContent = "";
     alert("Error saving template: " + err.message);
   }
+};
+
+// After-save buttons
+document.getElementById("create-another-btn").onclick = function() {
+  // Reset all state and go back to name step
+  templateKey = "";
+  templateLabel = "";
+  sections = [];
+  addingFieldToSectionIdx = null;
+  editingSectionIdx = null;
+  document.getElementById("template-name").value = "";
+  document.getElementById("step-preview").style.display = "none";
+  document.getElementById("builder-area").style.display = "none";
+  document.getElementById("step-name").style.display = "";
+  document.getElementById("save-status").textContent = "";
+  document.getElementById("after-save-btns").style.display = "none";
+  document.getElementById("save-template-btn").style.display = "";
+};
+
+document.getElementById("admin-btn").onclick = function() {
+  window.location.href = "/admin.html";
 };
 </script>
 </body>
