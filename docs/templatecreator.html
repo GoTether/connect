@@ -5,7 +5,517 @@
   <title>Create Template (Tether)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/1<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Template (Tether)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: #f7f8fa;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #main {
+      max-width: 800px;
+      margin: 2em auto;
+      background: #fff;
+      padding: 2em 2em 3em 2em;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px #e0e4eb;
+    }
+    .step-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+    .help-text {
+      color: #666;
+      margin-bottom: 1em;
+      font-size: 1em;
+    }
+    .input-block {
+      padding: 1.5em;
+      background: #f2f6fa;
+      border-radius: 12px;
+      margin-bottom: 2em;
+      box-shadow: 0 2px 7px #e4e8ef;
+    }
+    input, select, textarea {
+      font-size: 1.1em;
+      padding: 0.7em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+      margin-bottom: 1em;
+      box-sizing: border-box;
+    }
+    button {
+      background: #2b90ff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.7em 1.5em;
+      font-size: 1.1em;
+      cursor: pointer;
+      margin-right: 0.7em;
+      margin-top: 0.3em;
+      box-shadow: 0 2px 6px #d8e6f9;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #176fd2;
+    }
+    .card {
+      background: #f0f4fa;
+      border-radius: 12px;
+      margin-bottom: 1.5em;
+      padding: 1.2em;
+      box-shadow: 0 2px 7px #e4e8ef;
+      position: relative;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 1.15em;
+      margin-bottom: 0.5em;
+      color: #2b90ff;
+    }
+    .field-list {
+      margin-top: 0.8em;
+      margin-bottom: 0.8em;
+    }
+    .field-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 0.7em 1em;
+      margin-bottom: 0.4em;
+      box-shadow: 0 1px 5px #e0e4eb;
+      border-left: 4px solid #2b90ff;
+      position: relative;
+    }
+    .remove-btn, .edit-btn, .add-field-btn {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4em 1em;
+      font-size: 0.95em;
+      cursor: pointer;
+      margin-left: 0.7em;
+      margin-top: 0.3em;
+    }
+    .remove-btn:hover, .edit-btn:hover {
+      background: #c0392b;
+    }
+    .add-field-btn {
+      background: #2b90ff;
+      color: #fff;
+      margin: 0.7em 0 0 0;
+    }
+    .add-field-btn:hover {
+      background: #176fd2;
+    }
+    .preview-block {
+      background: #effbe0;
+      border-radius: 12px;
+      padding: 1.5em;
+      margin-top: 2em;
+      box-shadow: 0 2px 7px #cde6b6;
+    }
+    .error-message {
+      color: #e74c3c;
+      margin-bottom: 1em;
+      font-weight: bold;
+    }
+    .success-message {
+      color: #27ae60;
+      margin-top: 1em;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .inline-field-form {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1em;
+      margin-bottom: 0.7em;
+      box-shadow: 0 1px 5px #e0e4eb;
+      border-left: 4px solid #2b90ff;
+    }
+    .section-actions {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+      display: flex;
+      gap: 0.2em;
+    }
+    .edit-section-form {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1em;
+      margin-bottom: 0.7em;
+      box-shadow: 0 1px 5px #e0e4eb;
+      border-left: 4px solid #f39c12;
+    }
+    @media (max-width: 700px) {
+      #main { padding: 1em; }
+      .input-block, .card, .preview-block { padding: 1em; }
+      .section-actions { position: static; margin-top:0.7em; }
+    }
+  </style>
+</head>
+<body>
+<div id="main">
+  <!-- STEP 1: NAME -->
+  <div id="step-name" class="input-block">
+    <div class="step-title">Create a New Template</div>
+    <div class="help-text">Start by naming your template.<br><span style="color:#999;">(Example: Car Maintenance Log)</span></div>
+    <input type="text" id="template-name" required placeholder="Template Name">
+    <button id="start-btn">Next</button>
+    <div id="name-error" class="error-message"></div>
+  </div>
+
+  <!-- STEP 2: SECTIONS + FIELDS -->
+  <div id="builder-area" style="display:none;">
+    <div class="step-title" style="margin-bottom:1.2em;">Build your template</div>
+    <div class="help-text">Add sections and fields below. Click "+ Add Section" to create new sections. For each section, add any number of fields.</div>
+    <div id="sections-list"></div>
+    <button id="add-section-btn" style="margin-bottom:2em;">+ Add Section</button>
+    <button id="preview-btn" style="float:right;">Preview & Save</button>
+    <div style="clear:both;"></div>
+    <div id="section-error" class="error-message"></div>
+  </div>
+
+  <!-- PREVIEW & SAVE -->
+  <div id="step-preview" class="preview-block" style="display:none;">
+    <div class="step-title">Preview your Template</div>
+    <div id="preview-content"></div>
+    <button id="save-template-btn" style="margin-top:2em;">Save Template</button>
+    <div id="save-status" class="success-message"></div>
+    <button id="edit-btn" style="margin-top:2em;">Go Back & Edit</button>
+  </div>
+</div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+  authDomain: "tether-71e0c.firebaseapp.com",
+  databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+  projectId: "tether-71e0c",
+  storageBucket: "tether-71e0c.appspot.com",
+  messagingSenderId: "277809008742",
+  appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+  measurementId: "G-X7ZQ6DJYEN"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+let templateKey = "";
+let templateLabel = "";
+let sections = [];
+let addingFieldToSectionIdx = null; // Tracks which section's field form is open
+let editingSectionIdx = null; // Tracks which section's edit form is open
+
+function generateKey(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
+}
+
+// STEP 1: Name
+document.getElementById("start-btn").onclick = async function() {
+  const nameInput = document.getElementById("template-name").value.trim();
+  if (!nameInput) return;
+  document.getElementById("name-error").textContent = "";
+  const key = generateKey(nameInput);
+
+  // Check uniqueness in Firebase
+  const templateRef = database.ref('global_templates/' + key);
+  const existing = await templateRef.get();
+  if (existing.exists()) {
+    document.getElementById("name-error").textContent = "A template with this name already exists. Please try a different name.";
+    return;
+  }
+  templateKey = key;
+  templateLabel = nameInput;
+  document.getElementById("step-name").style.display = "none";
+  document.getElementById("builder-area").style.display = "";
+  renderSections();
+};
+
+// Add Section
+document.getElementById("add-section-btn").onclick = function() {
+  showSectionForm();
+};
+
+function showSectionForm() {
+  const list = document.getElementById("sections-list");
+  // Prevent multiple section forms
+  if (document.getElementById("new-section-form")) return;
+  const formDiv = document.createElement("div");
+  formDiv.className = "input-block";
+  formDiv.style.marginBottom = "1.5em";
+  formDiv.innerHTML = `
+    <form id="new-section-form">
+      <input type="text" id="new-section-name" required placeholder="Section Name">
+      <input type="text" id="new-section-desc" placeholder="Description (optional)">
+      <button id="new-section-save-btn">Save Section</button>
+      <button id="new-section-cancel-btn" type="button" style="background:#777;">Cancel</button>
+      <div id="section-form-error" class="error-message"></div>
+    </form>
+  `;
+  list.prepend(formDiv);
+
+  document.getElementById("new-section-form").onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById("new-section-name").value.trim();
+    const desc = document.getElementById("new-section-desc").value.trim();
+    if (!name) {
+      document.getElementById("section-form-error").textContent = "Section name required.";
+      return;
+    }
+    sections.push({name, description: desc, fields: []});
+    renderSections();
+  };
+  document.getElementById("new-section-cancel-btn").onclick = function() {
+    formDiv.remove();
+  };
+}
+
+// Edit Section
+function showEditSectionForm(sectionIdx) {
+  if (editingSectionIdx !== null) {
+    document.getElementById(`edit-section-form-wrap-${editingSectionIdx}`).innerHTML = '';
+  }
+  editingSectionIdx = sectionIdx;
+  const wrap = document.getElementById(`edit-section-form-wrap-${sectionIdx}`);
+  wrap.innerHTML = `
+    <form id="edit-section-form-${sectionIdx}" class="edit-section-form">
+      <input type="text" id="edit-section-name-${sectionIdx}" required value="${sections[sectionIdx].name}" placeholder="Section Name">
+      <input type="text" id="edit-section-desc-${sectionIdx}" value="${sections[sectionIdx].description || ''}" placeholder="Description (optional)">
+      <button type="submit">Save Changes</button>
+      <button type="button" id="edit-section-cancel-btn-${sectionIdx}" style="background:#777;">Cancel</button>
+      <div id="edit-section-error-${sectionIdx}" class="error-message"></div>
+    </form>
+  `;
+  document.getElementById(`edit-section-form-${sectionIdx}`).onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById(`edit-section-name-${sectionIdx}`).value.trim();
+    const desc = document.getElementById(`edit-section-desc-${sectionIdx}`).value.trim();
+    if (!name) {
+      document.getElementById(`edit-section-error-${sectionIdx}`).textContent = "Section name required.";
+      return;
+    }
+    sections[sectionIdx].name = name;
+    sections[sectionIdx].description = desc;
+    wrap.innerHTML = '';
+    editingSectionIdx = null;
+    renderSections();
+  };
+  document.getElementById(`edit-section-cancel-btn-${sectionIdx}`).onclick = function() {
+    wrap.innerHTML = '';
+    editingSectionIdx = null;
+  };
+}
+
+// Render Sections (with fields & add field forms)
+function renderSections() {
+  const list = document.getElementById("sections-list");
+  list.innerHTML = "";
+  sections.forEach((section, idx) => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div class="section-title">${section.name}</div>
+      <div style="color:#666; margin-bottom:0.6em;">${section.description || ""}</div>
+      <div class="section-actions">
+        <button class="remove-btn" data-idx="${idx}">Delete</button>
+        <button class="edit-btn" data-idx="${idx}">Edit</button>
+        <button class="add-field-btn" data-idx="${idx}">+ Add Field</button>
+      </div>
+      <div class="field-list" id="fields-list-${idx}"></div>
+      <div id="field-form-wrap-${idx}"></div>
+      <div id="edit-section-form-wrap-${idx}"></div>
+    `;
+    list.appendChild(div);
+
+    renderFieldsList(idx);
+
+    // Remove section
+    div.querySelector(".remove-btn").onclick = function() {
+      sections.splice(idx, 1);
+      renderSections();
+    };
+
+    // Edit section
+    div.querySelector(".edit-btn").onclick = function() {
+      showEditSectionForm(idx);
+    };
+
+    // Add field
+    div.querySelector(".add-field-btn").onclick = function() {
+      showFieldForm(idx);
+    };
+  });
+}
+
+// Show Field Form (inline under section)
+function showFieldForm(sectionIdx) {
+  if (addingFieldToSectionIdx !== null) {
+    // Only one field form at a time
+    document.getElementById(`field-form-wrap-${addingFieldToSectionIdx}`).innerHTML = '';
+  }
+  addingFieldToSectionIdx = sectionIdx;
+  const wrap = document.getElementById(`field-form-wrap-${sectionIdx}`);
+  wrap.innerHTML = `
+    <form id="new-field-form-${sectionIdx}" class="inline-field-form" autocomplete="off">
+      <input type="text" id="field-name-${sectionIdx}" required placeholder="Field Name">
+      <select id="field-type-${sectionIdx}">
+        <option value="text">Text</option>
+        <option value="textarea">Text Area</option>
+        <option value="number">Number</option>
+        <option value="dropdown">Dropdown</option>
+        <option value="radio">Radio Buttons</option>
+        <option value="checkbox">Checkbox</option>
+        <option value="image">Image Upload (Premium)</option>
+      </select>
+      <input type="text" id="field-help-${sectionIdx}" placeholder="Help text (optional)">
+      <input type="text" id="field-options-${sectionIdx}" placeholder="Options (comma separated)">
+      <label style="margin-right:1em;"><input type="checkbox" id="field-static-${sectionIdx}"> Static</label>
+      <label style="margin-right:1em;"><input type="checkbox" id="field-required-${sectionIdx}"> Required</label>
+      <label><input type="checkbox" id="field-premium-${sectionIdx}"> Premium Field</label>
+      <button type="submit">Save</button>
+      <button type="button" id="field-cancel-btn-${sectionIdx}" style="background:#777;">Cancel</button>
+      <div id="field-error-${sectionIdx}" class="error-message"></div>
+    </form>
+  `;
+  document.getElementById(`new-field-form-${sectionIdx}`).onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById(`field-name-${sectionIdx}`).value.trim();
+    const type = document.getElementById(`field-type-${sectionIdx}`).value;
+    const help = document.getElementById(`field-help-${sectionIdx}`).value.trim();
+    const optionsRaw = document.getElementById(`field-options-${sectionIdx}`).value;
+    const staticField = document.getElementById(`field-static-${sectionIdx}`).checked;
+    const required = document.getElementById(`field-required-${sectionIdx}`).checked;
+    const premium = document.getElementById(`field-premium-${sectionIdx}`).checked && type === "image";
+    let options = [];
+    if (type === "dropdown" || type === "radio") {
+      options = optionsRaw.split(",").map(opt=>opt.trim()).filter(opt=>opt);
+    }
+    if (!name) {
+      document.getElementById(`field-error-${sectionIdx}`).textContent = "Field name required.";
+      return;
+    }
+    sections[sectionIdx].fields.push({name, type, static: staticField, required, help, options, premium});
+    wrap.innerHTML = '';
+    addingFieldToSectionIdx = null;
+    renderFieldsList(sectionIdx);
+  };
+  document.getElementById(`field-cancel-btn-${sectionIdx}`).onclick = function() {
+    wrap.innerHTML = '';
+    addingFieldToSectionIdx = null;
+  };
+}
+
+function renderFieldsList(sectionIdx) {
+  const fieldsListDiv = document.getElementById(`fields-list-${sectionIdx}`);
+  fieldsListDiv.innerHTML = "";
+  const fields = sections[sectionIdx].fields;
+  fields.forEach((field, idx) => {
+    const div = document.createElement("div");
+    div.className = "field-card";
+    div.innerHTML = `
+      <b>${field.name}</b> (${field.type})
+      ${field.static ? "<span style='color:#2b90ff;margin-left:0.4em;'>[static]</span>" : ""}
+      ${field.required ? "<span style='color:#27ae60;margin-left:0.4em;'>[required]</span>" : ""}
+      ${field.premium ? "<span style='color:#f39c12;margin-left:0.4em;'>[premium]</span>" : ""}
+      ${field.help ? `<div style="color:#666;">${field.help}</div>` : ""}
+      ${field.options && field.options.length ? `<div style='color:#999;'>Options: ${field.options.join(", ")}</div>` : ""}
+      <button class="remove-btn" data-idx="${idx}">Delete Field</button>
+    `;
+    fieldsListDiv.appendChild(div);
+    div.querySelector(".remove-btn").onclick = function() {
+      fields.splice(idx, 1);
+      renderFieldsList(sectionIdx);
+    };
+  });
+}
+
+// Preview & Save
+document.getElementById("preview-btn").onclick = function() {
+  // Validate: at least one section and each section has at least one field
+  let valid = true, errorMsg = "";
+  if (!templateLabel || !templateKey) {
+    valid = false; errorMsg = "Missing template name.";
+  } else if (!sections.length) {
+    valid = false; errorMsg = "Add at least one section before previewing.";
+  } else if (!sections.every(s => s.fields.length)) {
+    valid = false; errorMsg = "Each section needs at least one field.";
+  }
+  document.getElementById("section-error").textContent = valid ? "" : errorMsg;
+  if (!valid) return;
+  document.getElementById("builder-area").style.display = "none";
+  document.getElementById("step-preview").style.display = "";
+  renderPreview();
+};
+
+function renderPreview() {
+  const previewDiv = document.getElementById("preview-content");
+  previewDiv.innerHTML = `
+    <div style="font-size:1.2em; font-weight:bold; margin-bottom:0.4em;">${templateLabel}</div>
+    <div style="color:#666; margin-bottom:0.6em;">Key: <span style="color:#2b90ff;">${templateKey}</span></div>
+    ${sections.map(section => `
+      <div class="card">
+        <div class="section-title">${section.name}</div>
+        <div style="color:#666; margin-bottom:0.5em;">${section.description || ""}</div>
+        <div>
+          ${section.fields.map(field => `
+            <div class="field-card">
+              <b>${field.name}</b> (${field.type})
+              ${field.static ? "<span style='color:#2b90ff;margin-left:0.4em;'>[static]</span>" : ""}
+              ${field.required ? "<span style='color:#27ae60;margin-left:0.4em;'>[required]</span>" : ""}
+              ${field.premium ? "<span style='color:#f39c12;margin-left:0.4em;'>[premium]</span>" : ""}
+              ${field.help ? `<div style="color:#666;">${field.help}</div>` : ""}
+              ${field.options && field.options.length ? `<div style='color:#999;'>Options: ${field.options.join(", ")}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `).join("")}
+  `;
+}
+
+document.getElementById("edit-btn").onclick = function() {
+  document.getElementById("step-preview").style.display = "none";
+  document.getElementById("builder-area").style.display = "";
+};
+
+// Save
+document.getElementById("save-template-btn").onclick = async function() {
+  const templateRef = database.ref('global_templates/' + templateKey);
+  const existing = await templateRef.get();
+  if (existing.exists()) {
+    document.getElementById("save-status").textContent = "";
+    alert("A template with this name already exists. Please try a different name.");
+    return;
+  }
+  const templateData = {
+    key: templateKey,
+    label: templateLabel,
+    sections: sections,
+    version: 1
+  };
+  try {
+    await templateRef.set(templateData);
+    document.getElementById("save-status").textContent = "Template saved! 🎉";
+  } catch (err) {
+    document.getElementById("save-status").textContent = "";
+    alert("Error saving template: " + err.message);
+  }
+};
+</script>
+</body>
+</html>0.12.2/firebase-database-compat.js"></script>
   <style>
     body {
       background: #f7f8fa;
