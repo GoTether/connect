@@ -19,10 +19,10 @@
     .section-title { font-weight: bold; font-size: 1.15em; margin-bottom: 0.5em; color: #2b90ff; }
     .field-list { margin-top: 0.8em; margin-bottom: 0.8em; }
     .field-card { background: #fff; border-radius: 8px; padding: 0.7em 1em; margin-bottom: 0.4em; box-shadow: 0 1px 5px #e0e4eb; border-left: 4px solid #2b90ff; position: relative; }
-    .remove-btn, .edit-btn, .add-field-btn { background: #e74c3c; color: #fff; border: none; border-radius: 6px; padding: 0.4em 1em; font-size: 0.95em; cursor: pointer; margin-left: 0.7em; margin-top: 0.3em; }
+    .remove-btn, .edit-btn { background: #e74c3c; color: #fff; border: none; border-radius: 6px; padding: 0.4em 1em; font-size: 0.95em; cursor: pointer; margin-left: 0.7em; margin-top: 0.3em; }
     .remove-btn:hover, .edit-btn:hover { background: #c0392b; }
-    .add-field-btn { background: #2b90ff; color: #fff; margin: 0.7em 0 0 0; }
-    .add-field-btn:hover { background: #176fd2; }
+    .indented-add-field-btn { background: #2b90ff; color: #fff; margin: 0.7em 0 0 2em; display: block; width: fit-content; }
+    .indented-add-field-btn:hover { background: #176fd2; }
     .preview-block { background: #effbe0; border-radius: 12px; padding: 1.5em; margin-top: 2em; box-shadow: 0 2px 7px #cde6b6; }
     .error-message { color: #e74c3c; margin-bottom: 1em; font-weight: bold; }
     .success-message { color: #27ae60; margin-top: 1em; font-weight: bold; font-size: 1.1em; }
@@ -31,7 +31,10 @@
     .edit-section-form { background: #fff; border-radius: 8px; padding: 1em; margin-bottom: 0.7em; box-shadow: 0 1px 5px #e0e4eb; border-left: 4px solid #f39c12; }
     .static-badge { background: #27ae60; color: #fff; border-radius: 6px; padding: 0.2em 0.7em; font-size: 0.92em; margin-left: 0.5em; }
     .dynamic-badge { background: #2b90ff; color: #fff; border-radius: 6px; padding: 0.2em 0.7em; font-size: 0.92em; margin-left: 0.5em; }
-    @media (max-width: 700px) { #main { padding: 1em; } .input-block, .card, .preview-block { padding: 1em; } .section-actions { position: static; margin-top:0.7em; } }
+    .toggle-btn { border: none; border-radius: 6px; padding: 0.5em 1.2em; font-size: 1em; cursor: pointer; margin-right: 1em; transition: background 0.2s, color 0.2s; }
+    .toggle-yes { background: #27ae60; color: #fff; }
+    .toggle-no { background: #e74c3c; color: #fff; }
+    @media (max-width: 700px) { #main { padding: 1em; } .input-block, .card, .preview-block { padding: 1em; } .section-actions { position: static; margin-top:0.7em; } .indented-add-field-btn { margin-left: 0; } }
   </style>
 </head>
 <body>
@@ -220,11 +223,11 @@ function renderSections() {
       <div class="section-actions">
         <button class="remove-btn" data-idx="${idx}">Delete</button>
         <button class="edit-btn" data-idx="${idx}">Edit</button>
-        <button class="add-field-btn" data-idx="${idx}">+ Add Field</button>
       </div>
       <div class="field-list" id="fields-list-${idx}"></div>
       <div id="field-form-wrap-${idx}"></div>
       <div id="edit-section-form-wrap-${idx}"></div>
+      <button class="indented-add-field-btn" data-idx="${idx}">+ Add Field</button>
     `;
     list.appendChild(div);
 
@@ -241,8 +244,8 @@ function renderSections() {
       showEditSectionForm(idx);
     };
 
-    // Add field
-    div.querySelector(".add-field-btn").onclick = function() {
+    // Add field (indented, below fields)
+    div.querySelector(".indented-add-field-btn").onclick = function() {
       showFieldForm(idx);
     };
   });
@@ -255,6 +258,10 @@ function showFieldForm(sectionIdx) {
   }
   addingFieldToSectionIdx = sectionIdx;
   const wrap = document.getElementById(`field-form-wrap-${sectionIdx}`);
+  // Initial toggle state
+  let isStatic = sectionIdx === 0 ? true : false;
+  let isRequired = false;
+
   wrap.innerHTML = `
     <form id="new-field-form-${sectionIdx}" class="inline-field-form" autocomplete="off">
       <input type="text" id="field-name-${sectionIdx}" required placeholder="Field Name">
@@ -265,15 +272,16 @@ function showFieldForm(sectionIdx) {
         <option value="dropdown">Dropdown</option>
         <option value="radio">Radio Buttons</option>
         <option value="checkbox">Checkbox</option>
-        <option value="image">Image Upload (Premium)</option>
+        <option value="image">Image Upload</option>
       </select>
       <input type="text" id="field-help-${sectionIdx}" placeholder="Help text (optional)">
       <div id="options-wrap-${sectionIdx}" style="display:none;">
         <input type="text" id="field-options-${sectionIdx}" placeholder="Options (comma separated)">
       </div>
-      <label style="margin-right:1em;"><input type="checkbox" id="field-static-${sectionIdx}" ${sectionIdx === 0 ? 'checked disabled' : ''}> Static</label>
-      <label style="margin-right:1em;"><input type="checkbox" id="field-required-${sectionIdx}"> Required</label>
-      <label><input type="checkbox" id="field-premium-${sectionIdx}"> Premium Field</label>
+      <div style="margin-bottom:1em;">
+        <button type="button" id="static-toggle-${sectionIdx}" class="toggle-btn">Static: Yes</button>
+        <button type="button" id="required-toggle-${sectionIdx}" class="toggle-btn">Required: No</button>
+      </div>
       <button type="submit">Save</button>
       <button type="button" id="field-cancel-btn-${sectionIdx}" style="background:#777;">Cancel</button>
       <div id="field-error-${sectionIdx}" class="error-message"></div>
@@ -293,15 +301,38 @@ function showFieldForm(sectionIdx) {
   typeSelect.onchange = toggleOptionsInput;
   toggleOptionsInput();
 
+  // Toggle buttons logic
+  const staticBtn = document.getElementById(`static-toggle-${sectionIdx}`);
+  const requiredBtn = document.getElementById(`required-toggle-${sectionIdx}`);
+
+  function updateToggleUI() {
+    // Static toggle: Only allow static if sectionIdx==0 (first section)
+    staticBtn.textContent = "Static: " + (isStatic ? "Yes" : "No");
+    staticBtn.className = "toggle-btn " + (isStatic ? "toggle-yes" : "toggle-no");
+    staticBtn.disabled = (sectionIdx === 0); // always static for first section
+
+    requiredBtn.textContent = "Required: " + (isRequired ? "Yes" : "No");
+    requiredBtn.className = "toggle-btn " + (isRequired ? "toggle-yes" : "toggle-no");
+  }
+
+  updateToggleUI();
+
+  staticBtn.onclick = function() {
+    if (sectionIdx === 0) return; // can't toggle static for first section
+    isStatic = !isStatic;
+    updateToggleUI();
+  };
+  requiredBtn.onclick = function() {
+    isRequired = !isRequired;
+    updateToggleUI();
+  };
+
   document.getElementById(`new-field-form-${sectionIdx}`).onsubmit = function(e) {
     e.preventDefault();
     const name = document.getElementById(`field-name-${sectionIdx}`).value.trim();
     const type = document.getElementById(`field-type-${sectionIdx}`).value;
     const help = document.getElementById(`field-help-${sectionIdx}`).value.trim();
     const optionsRaw = document.getElementById(`field-options-${sectionIdx}`) ? document.getElementById(`field-options-${sectionIdx}`).value : "";
-    const staticField = sectionIdx === 0 ? true : document.getElementById(`field-static-${sectionIdx}`).checked;
-    const required = document.getElementById(`field-required-${sectionIdx}`).checked;
-    const premium = document.getElementById(`field-premium-${sectionIdx}`).checked && type === "image";
     let options = [];
     if (type === "dropdown") {
       options = optionsRaw.split(",").map(opt=>opt.trim()).filter(opt=>opt);
@@ -310,7 +341,14 @@ function showFieldForm(sectionIdx) {
       document.getElementById(`field-error-${sectionIdx}`).textContent = "Field name required.";
       return;
     }
-    sections[sectionIdx].fields.push({name, type, static: staticField, required, help, options, premium});
+    sections[sectionIdx].fields.push({
+      name,
+      type,
+      static: sectionIdx === 0 ? true : isStatic,
+      required: isRequired,
+      help,
+      options
+    });
     wrap.innerHTML = '';
     addingFieldToSectionIdx = null;
     renderFieldsList(sectionIdx);
@@ -332,7 +370,6 @@ function renderFieldsList(sectionIdx) {
       <b>${field.name}</b> (${field.type})
       ${field.static ? "<span style='color:#2b90ff;margin-left:0.4em;'>[static]</span>" : ""}
       ${field.required ? "<span style='color:#27ae60;margin-left:0.4em;'>[required]</span>" : ""}
-      ${field.premium ? "<span style='color:#f39c12;margin-left:0.4em;'>[premium]</span>" : ""}
       ${field.help ? `<div style="color:#666;">${field.help}</div>` : ""}
       ${field.options && field.options.length ? `<div style='color:#999;'>Options: ${field.options.join(", ")}</div>` : ""}
       <button class="remove-btn" data-idx="${idx}">Delete Field</button>
@@ -379,7 +416,6 @@ function renderPreview() {
               <b>${field.name}</b> (${field.type})
               ${field.static ? "<span style='color:#2b90ff;margin-left:0.4em;'>[static]</span>" : ""}
               ${field.required ? "<span style='color:#27ae60;margin-left:0.4em;'>[required]</span>" : ""}
-              ${field.premium ? "<span style='color:#f39c12;margin-left:0.4em;'>[premium]</span>" : ""}
               ${field.help ? `<div style="color:#666;">${field.help}</div>` : ""}
               ${field.options && field.options.length ? `<div style='color:#999;'>Options: ${field.options.join(", ")}</div>` : ""}
             </div>
