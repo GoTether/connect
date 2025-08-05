@@ -74,6 +74,33 @@
     let activeType = "terra";
     let renameMode = {}; // Track which template is in rename mode
 
+    // --- Load Existing Templates on Page Load ---
+    function loadTemplatesFromStorage() {
+      // Try to load Terra templates
+      const terra = localStorage.getItem("terraTemplates");
+      if (terra) {
+        try {
+          terraTemplates = JSON.parse(terra);
+        } catch (e) {
+          terraTemplates = [];
+        }
+      }
+      // Try to load Aura templates
+      const aura = localStorage.getItem("auraTemplates");
+      if (aura) {
+        try {
+          auraTemplates = JSON.parse(aura);
+        } catch (e) {
+          auraTemplates = [];
+        }
+      }
+    }
+
+    function saveTemplatesToStorage() {
+      localStorage.setItem("terraTemplates", JSON.stringify(terraTemplates));
+      localStorage.setItem("auraTemplates", JSON.stringify(auraTemplates));
+    }
+
     // --- UI Switch Logic ---
     document.getElementById("terra-btn").onclick = function() {
       setActiveType("terra");
@@ -121,6 +148,7 @@
             const val = card.querySelector(`#rename-input-${t.key}`).value.trim();
             if (val) { t.label = val; }
             renameMode[t.key] = false;
+            saveTemplatesToStorage();
             renderTemplates();
           };
           card.querySelector(`#rename-cancel-btn-${t.key}`).onclick = function() {
@@ -148,6 +176,7 @@
               } else {
                 auraTemplates = auraTemplates.filter(x => x.key !== t.key);
               }
+              saveTemplatesToStorage();
               renderTemplates();
             }
           };
@@ -238,17 +267,15 @@
         } else {
           auraTemplates = auraTemplates.concat(imported);
         }
+        saveTemplatesToStorage();
         renderTemplates();
         document.getElementById("upload-status").textContent = "Templates imported successfully!";
       };
       reader.readAsText(file);
     };
 
-    // --- Initial Data (optional: add sample templates here) ---
-    terraTemplates = []; // You can preload some templates if you want
-    auraTemplates = [];
-
-    // --- Initial Render ---
+    // --- Initial Load ---
+    loadTemplatesFromStorage();
     renderTemplates();
   </script>
 </body>
