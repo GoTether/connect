@@ -16,6 +16,8 @@
     button { background: #2b90ff; color: #fff; border: none; border-radius: 6px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; margin-right: 0.7em; margin-top: 0.3em; box-shadow: 0 2px 6px #d8e6f9; transition: background 0.2s; }
     button:disabled { background: #bbb; cursor: not-allowed; }
     button:hover:not(:disabled) { background: #176fd2; }
+    .admin-btn { background: #e74c3c; color: #fff; border: none; border-radius: 8px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 6px #f6d9d7; margin-top:0.3em; margin-right:0.7em;}
+    .admin-btn:hover { background: #c0392b; }
     .card { background: #f0f4fa; border-radius: 16px; margin-bottom: 2em; padding: 1.5em 1.2em; box-shadow: 0 2px 12px #e0e4eb; position: relative; }
     .section-title { font-weight: bold; font-size: 1.18em; margin-bottom: 0.3em; color: #2b90ff; letter-spacing: 0.02em;}
     .section-desc { color: #666; margin-bottom: 1em; font-size: 1em; }
@@ -56,6 +58,7 @@
     #save-template-label-btn:hover { background:#1a7342; }
     #cancel-template-label-btn { font-size:1em; padding:0.4em 1em; background:#e74c3c; color:#fff; border:none; border-radius:6px; margin-left:0.5em; cursor:pointer;}
     #cancel-template-label-btn:hover { background:#c0392b; }
+    .admin-btn-wrap { display: flex; justify-content: flex-end; margin-bottom: 1em; }
     @media (max-width: 700px) { #main { padding: 1em; } .input-block, .card, .preview-block { padding: 1em; } .section-actions { position: static; margin-top:0.7em; } .indented-add-field-btn { margin-left: 0; } .after-save-btns { flex-direction: column; gap: 0.5em; } }
   </style>
 </head>
@@ -63,6 +66,7 @@
 <div id="main">
   <!-- STEP 1: NAME -->
   <div id="step-name" class="input-block">
+    <div class="admin-btn-wrap"><button class="admin-btn" onclick="window.location.href='/connect/admin.html'">Back to Admin</button></div>
     <div class="step-title">Create a New Template</div>
     <div class="help-text">Start by naming your template.<br><span style="color:#999;">(Example: Car Maintenance Log)</span></div>
     <input type="text" id="template-name" required placeholder="Template Name">
@@ -71,6 +75,7 @@
   </div>
   <!-- STEP 2: SECTIONS + FIELDS -->
   <div id="builder-area" style="display:none;">
+    <div class="admin-btn-wrap"><button class="admin-btn" id="builder-admin-btn">Back to Admin</button></div>
     <div class="template-label-display" id="template-label-display" style="display:none;">
       <span id="template-label-text" style="font-size:1.4em; font-weight:700; color:#2b90ff;"></span>
       <button id="edit-template-label-btn" title="Edit template name">Edit Name</button>
@@ -91,6 +96,7 @@
   </div>
   <!-- PREVIEW & SAVE -->
   <div id="step-preview" class="preview-block" style="display:none;">
+    <div class="admin-btn-wrap"><button class="admin-btn" id="preview-admin-btn">Back to Admin</button></div>
     <div class="step-title">Preview your Template</div>
     <div id="preview-content"></div>
     <div id="after-save-btns" class="after-save-btns" style="display:none;">
@@ -172,6 +178,14 @@ document.getElementById("start-btn").onclick = async function() {
   document.getElementById("builder-area").style.display = "";
   updateTemplateLabelDisplay();
   renderSections();
+};
+
+// --- Back to Admin for all steps ---
+document.getElementById("builder-admin-btn").onclick = function() {
+  window.location.href = "/connect/admin.html";
+};
+document.getElementById("preview-admin-btn").onclick = function() {
+  window.location.href = "/connect/admin.html";
 };
 
 // --- Editable template label ---
