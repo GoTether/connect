@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0;}
-    #main { max-width: 580px; margin: 4em auto; background: #fff; padding: 2em; border-radius: 18px; box-shadow: 0 4px 16px #e0e4eb; text-align:center;}
+    #main { max-width: 620px; margin: 4em auto; background: #fff; padding: 2em; border-radius: 18px; box-shadow: 0 4px 16px #e0e4eb; text-align:center;}
     .header { font-size: 2em; font-weight: bold; margin-bottom: 0.4em; color: #2b90ff;}
     .subtitle { color: #666; margin-bottom: 2em; font-size: 1.13em;}
     .select-btn { background: #2b90ff; color: #fff; border: none; border-radius: 10px; padding: 1.2em 2.5em; font-size: 1.18em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; margin: 1em 0;}
@@ -15,12 +15,12 @@
     .terra-icon, .aura-icon {font-size:2em; vertical-align:middle; margin-right:0.2em;}
     .section {text-align:left; margin:2em 0 1em 0; padding:1em 0;}
     .section-title {font-weight:bold; font-size:1.2em; margin-bottom:.3em;}
-    .field-row {margin-bottom:1em;}
+    .field-row {margin-bottom:1.2em;}
     .field-label {font-weight:500; margin-bottom:.2em; display:block;}
-    input[type="text"], textarea {width:95%; padding:.7em; border-radius:8px; border:1px solid #dbe4f3; font-size:1em; margin-bottom:.3em;}
+    input[type="text"], textarea, select {width:95%; padding:.7em; border-radius:8px; border:1px solid #dbe4f3; font-size:1em; margin-bottom:.3em;}
     textarea {min-height:60px;}
     .fields-list {margin-bottom:1em;}
-    .fields-list input[type="text"] {width:80%; display:inline-block;}
+    .fields-list input[type="text"] {width:70%; display:inline-block;}
     .remove-field {background:#fbb; border:none; border-radius:6px; padding:0.3em 0.8em; margin-left:0.6em; cursor:pointer;}
     .add-field-btn {background:#2b90ff; color:#fff; border:none; border-radius:6px; padding:0.45em 1.2em; margin-top:.5em; cursor:pointer;}
     .add-field-btn:hover {background:#176fd2;}
@@ -28,6 +28,14 @@
     .hidden { display: none; }
     .admin-link {display:inline-block; margin-bottom:2em; font-size:1em; color:#2b90ff; background:#eaf2fb; border-radius:8px; padding:0.7em 1.5em; text-decoration:none; font-weight:bold; transition:.2s;}
     .admin-link:hover {background:#dbe4f3; color:#176fd2;}
+    .link-row {display:flex; gap:8px; margin-bottom:8px;}
+    .link-row input[type="text"] {width:45%;}
+    .add-link-btn {background:#2b90ff; color:#fff; border:none; border-radius:6px; padding:0.3em 1em; cursor:pointer;}
+    .remove-link-btn {background:#fbb; border:none; border-radius:6px; padding:0.2em 0.8em; cursor:pointer;}
+    .dropdown-options {margin-bottom:0.5em;}
+    .dropdown-options input[type="text"] {width:70%; display:inline-block; margin-right:8px;}
+    .add-option-btn {background:#44c678; color:#fff; border:none; border-radius:6px; padding:0.3em 1em; cursor:pointer;}
+    .remove-option-btn {background:#fbb; border:none; border-radius:6px; padding:0.2em 0.8em; cursor:pointer;}
   </style>
 </head>
 <body>
@@ -71,19 +79,22 @@
       </div>
       <div class="field-row">
         <label class="field-label">External Links</label>
-        <input type="text" id="linkLabel1" placeholder="Label (e.g., Official Site)">
-        <input type="text" id="linkUrl1" placeholder="URL">
+        <div id="linksList">
+          <div class="link-row">
+            <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
+            <input type="text" placeholder="URL" class="linkUrl">
+            <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+          </div>
+        </div>
+        <button class="add-link-btn" onclick="addLink()">Add Another Link</button>
       </div>
-      <!-- Add more links as needed in future -->
     </div>
     <div class="section">
       <div class="section-title">User Diary Entry Fields (Questions)</div>
-      <div class="fields-list" id="fieldsList">
-        <!-- Dynamically added fields -->
-      </div>
+      <div class="fields-list" id="fieldsList"></div>
       <div class="field-row">
         <input type="text" id="newFieldName" placeholder="Question/field label (e.g., 'Where did you drink this?')">
-        <select id="newFieldType">
+        <select id="newFieldType" onchange="onFieldTypeChange()">
           <option value="text">Text</option>
           <option value="textarea">Long Text</option>
           <option value="rating">Rating (1-10)</option>
@@ -91,6 +102,12 @@
           <option value="dropdown">Dropdown</option>
           <option value="photo">Photo Upload</option>
         </select>
+        <div id="dropdownOptions" class="dropdown-options hidden">
+          <label style="font-size:0.97em; margin-right:4px;">Dropdown Options:</label>
+          <input type="text" class="optionInput" placeholder="Option text">
+          <button class="add-option-btn" onclick="addDropdownOption()">Add Option</button>
+          <div id="optionsList"></div>
+        </div>
         <button class="add-field-btn" onclick="addField()">Add Field</button>
       </div>
     </div>
@@ -103,6 +120,7 @@
 <script>
   // Store entry fields
   let entryFields = [];
+  let dropdownOptions = [];
 
   function showAuraCreator() {
     document.getElementById('landing-choice').classList.add('hidden');
@@ -115,19 +133,62 @@
     document.getElementById('landing-choice').classList.remove('hidden');
     document.getElementById('landing-subtitle').classList.remove('hidden');
     entryFields = [];
+    dropdownOptions = [];
     document.getElementById('fieldsList').innerHTML = '';
     document.getElementById('aura-preview').classList.add('hidden');
     document.getElementById('aura-preview').innerHTML = '';
+    resetLinks();
+    resetDropdownOptions();
   }
 
+  // External Links Logic
+  function addLink() {
+    const linksList = document.getElementById('linksList');
+    const div = document.createElement('div');
+    div.className = 'link-row';
+    div.innerHTML = `
+      <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
+      <input type="text" placeholder="URL" class="linkUrl">
+      <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+    `;
+    linksList.appendChild(div);
+  }
+
+  function removeLink(btn) {
+    btn.parentElement.remove();
+  }
+
+  function resetLinks() {
+    const linksList = document.getElementById('linksList');
+    linksList.innerHTML = `
+      <div class="link-row">
+        <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
+        <input type="text" placeholder="URL" class="linkUrl">
+        <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+      </div>
+    `;
+  }
+
+  // Entry Fields Logic
   function addField() {
     const name = document.getElementById('newFieldName').value.trim();
     const type = document.getElementById('newFieldType').value;
     if (!name) return;
-    entryFields.push({label: name, type});
+    let field = {label: name, type};
+
+    if (type === 'dropdown') {
+      if (dropdownOptions.length === 0) {
+        alert('Please add at least one dropdown option.');
+        return;
+      }
+      field.options = [...dropdownOptions];
+    }
+    entryFields.push(field);
     renderFields();
     document.getElementById('newFieldName').value = '';
     document.getElementById('newFieldType').value = 'text';
+    resetDropdownOptions();
+    document.getElementById('dropdownOptions').classList.add('hidden');
   }
 
   function removeField(idx) {
@@ -139,28 +200,97 @@
     const list = document.getElementById('fieldsList');
     list.innerHTML = '';
     entryFields.forEach((field, idx) => {
+      let extra = '';
+      if (field.type === 'dropdown' && field.options) {
+        extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
+      }
       list.innerHTML += `
         <div>
           <span style="font-weight:500;">${field.label}</span>
-          <span style="font-size:0.95em; color:#888;">[${field.type}]</span>
+          <span style="font-size:0.95em; color:#888;">[${field.type}]</span>${extra}
           <button class="remove-field" onclick="removeField(${idx})">Remove</button>
         </div>
       `;
     });
   }
 
+  // Dropdown Option Logic
+  function onFieldTypeChange() {
+    const type = document.getElementById('newFieldType').value;
+    if (type === 'dropdown') {
+      document.getElementById('dropdownOptions').classList.remove('hidden');
+    } else {
+      document.getElementById('dropdownOptions').classList.add('hidden');
+      resetDropdownOptions();
+    }
+  }
+
+  function addDropdownOption() {
+    const input = document.querySelector('.optionInput');
+    const val = input.value.trim();
+    if (!val) return;
+    dropdownOptions.push(val);
+    renderDropdownOptions();
+    input.value = '';
+  }
+
+  function removeDropdownOption(idx) {
+    dropdownOptions.splice(idx, 1);
+    renderDropdownOptions();
+  }
+
+  function renderDropdownOptions() {
+    const optionsList = document.getElementById('optionsList');
+    optionsList.innerHTML = '';
+    dropdownOptions.forEach((opt, idx) => {
+      optionsList.innerHTML += `
+        <div>
+          <span>${opt}</span>
+          <button class="remove-option-btn" onclick="removeDropdownOption(${idx})">Remove</button>
+        </div>
+      `;
+    });
+  }
+
+  function resetDropdownOptions() {
+    dropdownOptions = [];
+    renderDropdownOptions();
+    document.querySelector('.optionInput').value = '';
+  }
+
+  // Preview and Save
   function previewAuraTemplate() {
     const type = document.getElementById('tetherType').value.trim();
     const desc = document.getElementById('tetherDesc').value.trim();
     const preview = document.getElementById('aura-preview');
     let html = `<div><b>Tether Type:</b> ${type || '<i>(none)</i>'}</div>`;
     html += `<div><b>Description:</b> ${desc || '<i>(none)</i>'}</div>`;
+
+    // External Links
+    const linksList = document.getElementById('linksList').querySelectorAll('.link-row');
+    let links = [];
+    linksList.forEach(row => {
+      const label = row.querySelector('.linkLabel').value.trim();
+      const url = row.querySelector('.linkUrl').value.trim();
+      if (label && url) links.push({label, url});
+    });
+    if (links.length > 0) {
+      html += `<div style="margin-top:1em;"><b>Links:</b><ul>`;
+      links.forEach(link => {
+        html += `<li>${link.label}: <a href="${link.url}" target="_blank">${link.url}</a></li>`;
+      });
+      html += `</ul></div>`;
+    }
+
     html += `<div style="margin-top:1em;"><b>User Diary Entry Fields:</b></div>`;
     if (entryFields.length === 0) html += `<div><i>No entry fields added yet.</i></div>`;
     else {
       html += '<ul>';
       entryFields.forEach(field => {
-        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span></li>`;
+        let extra = '';
+        if (field.type === 'dropdown' && field.options)
+          extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
+        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span>${extra}</li>`;
       });
       html += '</ul>';
     }
@@ -172,14 +302,20 @@
     const type = document.getElementById('tetherType').value.trim();
     const desc = document.getElementById('tetherDesc').value.trim();
     let image = document.getElementById('tetherImage').files[0] || null;
-    const linkLabel = document.getElementById('linkLabel1').value.trim();
-    const linkUrl = document.getElementById('linkUrl1').value.trim();
+    // Gather links
+    const linksList = document.getElementById('linksList').querySelectorAll('.link-row');
+    let links = [];
+    linksList.forEach(row => {
+      const label = row.querySelector('.linkLabel').value.trim();
+      const url = row.querySelector('.linkUrl').value.trim();
+      if (label && url) links.push({label, url});
+    });
     // For demo, just build object and log (replace with Firebase save logic)
     const template = {
       tetherType: type,
       description: desc,
       image,
-      links: linkLabel && linkUrl ? [{label: linkLabel, url: linkUrl}] : [],
+      links,
       entryFields
     };
     alert('Aura template saved!\n\n' + JSON.stringify(template, null, 2));
