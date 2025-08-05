@@ -47,17 +47,20 @@
     <button class="admin-btn" onclick="window.location.href='/connect/admin.html'">Back to Admin</button>
   </div>
   <div class="subtitle">
-    Search, view, rename, delete and <b>bulk upload</b> templates.<br>
-    <span style="color:#2b90ff;">Bulk upload now supports multiple templates in a single JSON file!</span>
+    Search, view, rename, delete, and <b>bulk upload</b> templates.<br>
+    <span style="color:#2b90ff;">You can now upload a single JSON file containing one or more templates!</span>
   </div>
   <div class="upload-block">
     <div class="upload-label">Bulk Upload Templates</div>
     <input type="file" id="upload-input" accept=".json">
     <button class="upload-btn" id="upload-btn">Upload</button>
     <div class="upload-tip">
-      Upload a single JSON file containing one template object, or an array of template objects.<br>
-      <b>Each template must follow the required structure:</b> <i>key, label, sections[], version</i>.<br>
-      <span style="color:#e74c3c;">Each template will be imported under <b>global_templates/{key}</b>.</span>
+      <b>How it works:</b><br>
+      - Prepare a JSON file with your templates.<br>
+      - You can include <b>one template object</b, or <b>an array of template objects</b> in a single file.<br>
+      - Each template should have <b>key, label, sections (with fields), and version</b>.<br>
+      - After upload, your templates will be ready to use and manage here.<br>
+      <span style="color:#666;font-size:0.95em;">Need help formatting your templates? <a href="#" onclick="alert('Make sure your JSON matches the required structure. Each template should include key, label, sections (with fields), and version. See documentation or ask support for a sample.')">See example</a></span>
     </div>
     <div id="upload-status" class="upload-status"></div>
   </div>
@@ -170,7 +173,7 @@ document.getElementById("upload-btn").onclick = function() {
   const input = document.getElementById("upload-input");
   document.getElementById("upload-status").textContent = "";
   if (!input.files[0]) {
-    document.getElementById("upload-status").textContent = "Select a .json file to upload.";
+    document.getElementById("upload-status").textContent = "Please select a .json file to upload.";
     return;
   }
   const file = input.files[0];
@@ -233,8 +236,8 @@ document.getElementById("upload-btn").onclick = function() {
     });
     Promise.all(promises).then(() => {
       let msg = "";
-      if (imported.length) msg += `Imported: ${imported.join(", ")}. `;
-      if (errors.length) msg += `Errors: ${errors.join(" | ")}`;
+      if (imported.length) msg += `Upload complete! Imported: ${imported.join(", ")}. `;
+      if (errors.length) msg += `Some errors: ${errors.join(" | ")}`;
       document.getElementById("upload-status").textContent = msg || "No templates found in file.";
       fetchTemplates();
     });
