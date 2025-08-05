@@ -61,7 +61,7 @@
   <!-- STEP 2: SECTIONS + FIELDS -->
   <div id="builder-area" style="display:none;">
     <div class="step-title" style="margin-bottom:1.2em;">Build your template</div>
-    <div class="help-text">First section is for static data (e.g., Car Details). All others are dynamic (e.g., log entries).</div>
+    <div class="help-text">First section is for static details (e.g., Car Details). You must add at least one static field before continuing.</div>
     <div id="sections-list"></div>
     <div id="add-section-wrap"></div>
     <button id="preview-btn" style="float:right;">Preview</button>
@@ -110,6 +110,7 @@ let addingFieldToSectionIdx = null;
 let editingSectionIdx = null;
 let editMode = false; // True if user goes back to edit after saving
 
+// --- Utility ---
 function generateKey(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
 }
@@ -130,6 +131,14 @@ document.getElementById("start-btn").onclick = async function() {
   }
   templateKey = key;
   templateLabel = nameInput;
+  // Preload static section, cannot be deleted
+  sections = [{
+    name: "Static Details",
+    description: "Enter static info about your item (e.g., Car, Device, etc.). You must add at least one field.",
+    fields: [],
+    type: "static",
+    undeletable: true
+  }];
   document.getElementById("step-name").style.display = "none";
   document.getElementById("builder-area").style.display = "";
   renderSections();
@@ -187,7 +196,8 @@ function showSectionForm(insertIdx = null) {
       name,
       description: desc,
       fields: [],
-      type: sectionType // static or dynamic
+      type: sectionType,
+      undeletable: false
     });
     renderSections();
   };
@@ -251,7 +261,7 @@ function renderSections() {
       <div class="section-title">${section.name} ${sectionTypeLabel}</div>
       <div class="section-desc">${section.description || ""}</div>
       <div class="section-actions">
-        <button class="remove-btn" data-idx="${idx}">Delete</button>
+        ${!section.undeletable ? `<button class="remove-btn" data-idx="${idx}">Delete</button>` : ""}
         <button class="edit-btn" data-idx="${idx}">Edit</button>
       </div>
       <div class="field-list" id="fields-list-${idx}"></div>
@@ -264,10 +274,12 @@ function renderSections() {
     renderFieldsList(idx);
 
     // Remove section
-    div.querySelector(".remove-btn").onclick = function() {
-      sections.splice(idx, 1);
-      renderSections();
-    };
+    if (!section.undeletable) {
+      div.querySelector(".remove-btn").onclick = function() {
+        sections.splice(idx, 1);
+        renderSections();
+      };
+    }
 
     // Edit section
     div.querySelector(".edit-btn").onclick = function() {
@@ -328,6 +340,15 @@ function showFieldForm(sectionIdx) {
       <div id="field-error-${sectionIdx}" class="error-message"></div>
     </form>
   `;
+
+  // Enter-to-save logic
+  const nameInput = document.getElementById(`field-name-${sectionIdx}`);
+  nameInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById(`new-field-form-${sectionIdx}`).requestSubmit();
+    }
+  });
 
   // Show/hide options input for dropdowns only
   const typeSelect = document.getElementById(`field-type-${sectionIdx}`);
@@ -426,13 +447,15 @@ function renderFieldsList(sectionIdx) {
   });
 }
 
-// Preview & Save
+// --- Preview & Save ---
 document.getElementById("preview-btn").onclick = function() {
   let valid = true, errorMsg = "";
   if (!templateLabel || !templateKey) {
     valid = false; errorMsg = "Missing template name.";
   } else if (!sections.length) {
     valid = false; errorMsg = "Add at least one section before previewing.";
+  } else if (!sections[0].fields.length) {
+    valid = false; errorMsg = "You must add at least one static field before previewing.";
   } else if (!sections.every(s => s.fields.length)) {
     valid = false; errorMsg = "Each section needs at least one field.";
   }
