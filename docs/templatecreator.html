@@ -24,7 +24,7 @@
     .step-title {
       font-size: 1.5em;
       font-weight: bold;
-      margin-bottom: 0.2em;
+      margin-bottom: 0.5em;
     }
     .help-text {
       color: #666;
@@ -129,19 +129,19 @@
 <div id="main">
   <!-- STEP 1: NAME -->
   <div id="step-name" class="input-block">
-    <div class="step-title">1. Name your template</div>
-    <div class="help-text">Choose a clear, unique name for this template.<br>For example: <i>Car Maintenance Log</i></div>
-    <input type="text" id="template-name" required placeholder="Template Name (e.g. Car Maintenance Log)">
-    <button id="start-btn">Start Building</button>
+    <div class="step-title">Create a New Template</div>
+    <div class="help-text">Start by naming your template.<br><span style="color:#999;">(Example: Car Maintenance Log)</span></div>
+    <input type="text" id="template-name" required placeholder="Template Name">
+    <button id="start-btn">Next</button>
     <div id="name-error" class="error-message"></div>
   </div>
 
   <!-- STEP 2: SECTIONS -->
   <div id="step-sections" class="input-block" style="display:none;">
-    <div class="step-title">2. Add sections</div>
-    <div class="help-text">Sections organize your template into logical groups. Examples: <i>Car Info, Maintenance Records</i></div>
+    <div class="step-title">Add Sections</div>
+    <div class="help-text">Sections organize your template. (Example: Car Info, Maintenance Records)</div>
     <form id="new-section-form" autocomplete="off" style="margin-bottom:1.5em;">
-      <input type="text" id="new-section-name" required placeholder="Section Name (e.g. Car Info)">
+      <input type="text" id="new-section-name" required placeholder="Section Name">
       <input type="text" id="new-section-desc" placeholder="Description (optional)">
       <button type="submit">+ Add Section</button>
     </form>
@@ -152,15 +152,13 @@
 
   <!-- STEP 3: FIELDS -->
   <div id="step-fields" class="input-block" style="display:none;">
-    <div class="step-title">3. Add fields to your sections</div>
-    <div class="help-text">Fields capture specific information in each section. Examples: <i>VIN, Date of Service, Service Type</i></div>
+    <div class="step-title">Add Fields to Sections</div>
+    <div class="help-text">Fields capture info inside sections. (Example: VIN, Date of Service)</div>
     <div id="fields-section-select-wrap" style="margin-bottom:1em;">
-      <select id="section-select">
-        <option value="">Choose section…</option>
-      </select>
+      <select id="section-select"></select>
     </div>
     <form id="new-field-form" autocomplete="off">
-      <input type="text" id="field-name" required placeholder="Field Name (e.g. VIN)">
+      <input type="text" id="field-name" required placeholder="Field Name">
       <select id="field-type">
         <option value="text">Text</option>
         <option value="textarea">Text Area</option>
@@ -171,10 +169,10 @@
         <option value="image">Image Upload (Premium)</option>
       </select>
       <input type="text" id="field-help" placeholder="Help text (optional)">
-      <input type="text" id="field-options" placeholder="Options (comma separated, for dropdown/radio)">
+      <input type="text" id="field-options" placeholder="Options (comma separated)">
       <label style="margin-right:1em;"><input type="checkbox" id="field-static"> Static</label>
       <label style="margin-right:1em;"><input type="checkbox" id="field-required"> Required</label>
-      <label><input type="checkbox" id="field-premium"> Premium Field (for images)</label>
+      <label><input type="checkbox" id="field-premium"> Premium Field</label>
       <button type="submit">+ Add Field</button>
     </form>
     <div id="fields-list"></div>
@@ -184,7 +182,7 @@
 
   <!-- PREVIEW & SAVE -->
   <div id="step-preview" class="preview-block" style="display:none;">
-    <div class="step-title">Preview your template</div>
+    <div class="step-title">Preview your Template</div>
     <div id="preview-content"></div>
     <button id="save-template-btn" style="margin-top:2em;">Save Template</button>
     <div id="save-status" class="success-message"></div>
@@ -209,13 +207,8 @@ let templateLabel = "";
 let sections = [];
 let currentSectionIdx = 0;
 
-// Utility: generate key from name
 function generateKey(name) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/--+/g, '-');
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
 }
 
 // STEP 1: Name
@@ -234,7 +227,6 @@ document.getElementById("start-btn").onclick = async function() {
   }
   templateKey = key;
   templateLabel = nameInput;
-  // Move to sections step
   document.getElementById("step-name").style.display = "none";
   document.getElementById("step-sections").style.display = "";
   renderSections();
@@ -274,7 +266,6 @@ function renderSections() {
     `;
     list.appendChild(div);
   });
-  // Remove section handler
   Array.from(document.querySelectorAll("button.remove-btn")).forEach(btn => {
     btn.onclick = function() {
       sections.splice(+btn.dataset.idx, 1);
@@ -282,7 +273,6 @@ function renderSections() {
       renderSectionSelect();
     };
   });
-  // Edit fields handler
   Array.from(document.querySelectorAll("button.edit-btn")).forEach(btn => {
     btn.onclick = function() {
       document.getElementById("next-fields-btn").click();
@@ -372,7 +362,6 @@ function renderFieldsList(sectionIdx) {
 }
 
 document.getElementById("fields-done-btn").onclick = function() {
-  // Validate: at least one field in each section
   let valid = true;
   sections.forEach(section => {
     if (!section.fields.length) valid = false;
@@ -386,7 +375,6 @@ document.getElementById("fields-done-btn").onclick = function() {
   renderPreview();
 };
 
-// PREVIEW & SAVE
 function renderPreview() {
   const previewDiv = document.getElementById("preview-content");
   previewDiv.innerHTML = `
@@ -414,7 +402,6 @@ function renderPreview() {
 }
 
 document.getElementById("save-template-btn").onclick = async function() {
-  // Check uniqueness again before saving
   const templateRef = database.ref('global_templates/' + templateKey);
   const existing = await templateRef.get();
   if (existing.exists()) {
