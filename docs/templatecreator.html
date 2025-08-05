@@ -14,7 +14,7 @@
       padding: 0;
     }
     #main {
-      max-width: 720px;
+      max-width: 800px;
       margin: 2em auto;
       background: #fff;
       padding: 2em 2em 3em 2em;
@@ -66,9 +66,10 @@
     .card {
       background: #f0f4fa;
       border-radius: 12px;
-      margin-bottom: 1.2em;
+      margin-bottom: 1.5em;
       padding: 1.2em;
       box-shadow: 0 2px 7px #e4e8ef;
+      position: relative;
     }
     .section-title {
       font-weight: bold;
@@ -87,8 +88,9 @@
       margin-bottom: 0.4em;
       box-shadow: 0 1px 5px #e0e4eb;
       border-left: 4px solid #2b90ff;
+      position: relative;
     }
-    .remove-btn {
+    .remove-btn, .edit-btn, .add-field-btn {
       background: #e74c3c;
       color: #fff;
       border: none;
@@ -96,10 +98,19 @@
       padding: 0.4em 1em;
       font-size: 0.95em;
       cursor: pointer;
-      margin-left: 0.8em;
+      margin-left: 0.7em;
+      margin-top: 0.3em;
     }
-    .remove-btn:hover {
+    .remove-btn:hover, .edit-btn:hover {
       background: #c0392b;
+    }
+    .add-field-btn {
+      background: #2b90ff;
+      color: #fff;
+      margin: 0.7em 0 0 0;
+    }
+    .add-field-btn:hover {
+      background: #176fd2;
     }
     .preview-block {
       background: #effbe0;
@@ -119,9 +130,25 @@
       font-weight: bold;
       font-size: 1.1em;
     }
+    .inline-field-form {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1em;
+      margin-bottom: 0.7em;
+      box-shadow: 0 1px 5px #e0e4eb;
+      border-left: 4px solid #2b90ff;
+    }
+    .section-actions {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+      display: flex;
+      gap: 0.2em;
+    }
     @media (max-width: 700px) {
       #main { padding: 1em; }
       .input-block, .card, .preview-block { padding: 1em; }
+      .section-actions { position: static; margin-top:0.7em; }
     }
   </style>
 </head>
@@ -136,48 +163,15 @@
     <div id="name-error" class="error-message"></div>
   </div>
 
-  <!-- STEP 2: SECTIONS -->
-  <div id="step-sections" class="input-block" style="display:none;">
-    <div class="step-title">Add Sections</div>
-    <div class="help-text">Sections organize your template. (Example: Car Info, Maintenance Records)</div>
-    <form id="new-section-form" autocomplete="off" style="margin-bottom:1.5em;">
-      <input type="text" id="new-section-name" required placeholder="Section Name">
-      <input type="text" id="new-section-desc" placeholder="Description (optional)">
-      <button type="submit">+ Add Section</button>
-    </form>
+  <!-- STEP 2: SECTIONS + FIELDS -->
+  <div id="builder-area" style="display:none;">
+    <div class="step-title" style="margin-bottom:1.2em;">Build your template</div>
+    <div class="help-text">Add sections and fields below. Click "+ Add Section" to create new sections. For each section, add any number of fields.</div>
     <div id="sections-list"></div>
-    <button id="next-fields-btn" style="margin-top:1em;">Next: Add Fields</button>
+    <button id="add-section-btn" style="margin-bottom:2em;">+ Add Section</button>
+    <button id="preview-btn" style="float:right;">Preview & Save</button>
+    <div style="clear:both;"></div>
     <div id="section-error" class="error-message"></div>
-  </div>
-
-  <!-- STEP 3: FIELDS -->
-  <div id="step-fields" class="input-block" style="display:none;">
-    <div class="step-title">Add Fields to Sections</div>
-    <div class="help-text">Fields capture info inside sections. (Example: VIN, Date of Service)</div>
-    <div id="fields-section-select-wrap" style="margin-bottom:1em;">
-      <select id="section-select"></select>
-    </div>
-    <form id="new-field-form" autocomplete="off">
-      <input type="text" id="field-name" required placeholder="Field Name">
-      <select id="field-type">
-        <option value="text">Text</option>
-        <option value="textarea">Text Area</option>
-        <option value="number">Number</option>
-        <option value="dropdown">Dropdown</option>
-        <option value="radio">Radio Buttons</option>
-        <option value="checkbox">Checkbox</option>
-        <option value="image">Image Upload (Premium)</option>
-      </select>
-      <input type="text" id="field-help" placeholder="Help text (optional)">
-      <input type="text" id="field-options" placeholder="Options (comma separated)">
-      <label style="margin-right:1em;"><input type="checkbox" id="field-static"> Static</label>
-      <label style="margin-right:1em;"><input type="checkbox" id="field-required"> Required</label>
-      <label><input type="checkbox" id="field-premium"> Premium Field</label>
-      <button type="submit">+ Add Field</button>
-    </form>
-    <div id="fields-list"></div>
-    <button id="fields-done-btn" style="margin-top:1em;">Preview & Save</button>
-    <div id="fields-error" class="error-message"></div>
   </div>
 
   <!-- PREVIEW & SAVE -->
@@ -186,6 +180,7 @@
     <div id="preview-content"></div>
     <button id="save-template-btn" style="margin-top:2em;">Save Template</button>
     <div id="save-status" class="success-message"></div>
+    <button id="edit-btn" style="margin-top:2em;">Go Back & Edit</button>
   </div>
 </div>
 <script>
@@ -205,7 +200,7 @@ const database = firebase.database();
 let templateKey = "";
 let templateLabel = "";
 let sections = [];
-let currentSectionIdx = 0;
+let addingFieldToSectionIdx = null; // Tracks which section's field form is open
 
 function generateKey(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
@@ -228,27 +223,45 @@ document.getElementById("start-btn").onclick = async function() {
   templateKey = key;
   templateLabel = nameInput;
   document.getElementById("step-name").style.display = "none";
-  document.getElementById("step-sections").style.display = "";
+  document.getElementById("builder-area").style.display = "";
   renderSections();
 };
 
-// STEP 2: Add Sections
-document.getElementById("new-section-form").onsubmit = function(e) {
-  e.preventDefault();
-  document.getElementById("section-error").textContent = "";
-  const name = document.getElementById("new-section-name").value.trim();
-  const desc = document.getElementById("new-section-desc").value.trim();
-  if (!name) {
-    document.getElementById("section-error").textContent = "Section name required.";
-    return;
-  }
-  sections.push({name, description: desc, fields: []});
-  renderSections();
-  document.getElementById("new-section-name").value = "";
-  document.getElementById("new-section-desc").value = "";
-  renderSectionSelect();
+// Add Section
+document.getElementById("add-section-btn").onclick = function() {
+  showSectionForm();
 };
 
+function showSectionForm() {
+  const list = document.getElementById("sections-list");
+  const formDiv = document.createElement("div");
+  formDiv.className = "input-block";
+  formDiv.style.marginBottom = "1.5em";
+  formDiv.innerHTML = `
+    <input type="text" id="new-section-name" required placeholder="Section Name">
+    <input type="text" id="new-section-desc" placeholder="Description (optional)">
+    <button id="new-section-save-btn">Save Section</button>
+    <button id="new-section-cancel-btn" style="background:#777;">Cancel</button>
+    <div id="section-form-error" class="error-message"></div>
+  `;
+  list.prepend(formDiv);
+
+  document.getElementById("new-section-save-btn").onclick = function() {
+    const name = document.getElementById("new-section-name").value.trim();
+    const desc = document.getElementById("new-section-desc").value.trim();
+    if (!name) {
+      document.getElementById("section-form-error").textContent = "Section name required.";
+      return;
+    }
+    sections.push({name, description: desc, fields: []});
+    renderSections();
+  };
+  document.getElementById("new-section-cancel-btn").onclick = function() {
+    formDiv.remove();
+  };
+}
+
+// Render Sections (with fields & add field forms)
 function renderSections() {
   const list = document.getElementById("sections-list");
   list.innerHTML = "";
@@ -258,87 +271,92 @@ function renderSections() {
     div.innerHTML = `
       <div class="section-title">${section.name}</div>
       <div style="color:#666; margin-bottom:0.6em;">${section.description || ""}</div>
-      <button class="remove-btn" data-idx="${idx}">Remove Section</button>
-      <button data-idx="${idx}" class="edit-btn">Edit Fields</button>
-      <div class="field-list">
-        ${section.fields.length ? `<div><em>Fields:</em> ${section.fields.map(f=>f.name).join(", ")}</div>` : "<div style='color:#aaa;'><em>No fields yet.</em></div>"}
+      <div class="section-actions">
+        <button class="remove-btn" data-idx="${idx}">Delete Section</button>
+        <button class="add-field-btn" data-idx="${idx}">+ Add Field</button>
       </div>
+      <div class="field-list" id="fields-list-${idx}"></div>
+      <div id="field-form-wrap-${idx}"></div>
     `;
     list.appendChild(div);
-  });
-  Array.from(document.querySelectorAll("button.remove-btn")).forEach(btn => {
-    btn.onclick = function() {
-      sections.splice(+btn.dataset.idx, 1);
+
+    renderFieldsList(idx);
+
+    // Remove section
+    div.querySelector(".remove-btn").onclick = function() {
+      sections.splice(idx, 1);
       renderSections();
-      renderSectionSelect();
     };
-  });
-  Array.from(document.querySelectorAll("button.edit-btn")).forEach(btn => {
-    btn.onclick = function() {
-      document.getElementById("next-fields-btn").click();
-      document.getElementById("section-select").value = btn.dataset.idx;
-      renderFieldsList(+btn.dataset.idx);
+
+    // Add field
+    div.querySelector(".add-field-btn").onclick = function() {
+      showFieldForm(idx);
     };
   });
 }
 
-document.getElementById("next-fields-btn").onclick = function() {
-  if (!sections.length) {
-    document.getElementById("section-error").textContent = "Add at least one section before proceeding.";
-    return;
+// Show Field Form (inline under section)
+function showFieldForm(sectionIdx) {
+  if (addingFieldToSectionIdx !== null) {
+    // Only one field form at a time
+    document.getElementById(`field-form-wrap-${addingFieldToSectionIdx}`).innerHTML = '';
   }
-  document.getElementById("step-sections").style.display = "none";
-  document.getElementById("step-fields").style.display = "";
-  renderSectionSelect();
-  renderFieldsList(0);
-  document.getElementById("section-select").value = "0";
-};
-
-function renderSectionSelect() {
-  const select = document.getElementById("section-select");
-  select.innerHTML = '';
-  sections.forEach((section, idx) => {
-    const opt = document.createElement("option");
-    opt.value = idx;
-    opt.textContent = section.name;
-    select.appendChild(opt);
-  });
-  if (sections.length) select.value = "0";
+  addingFieldToSectionIdx = sectionIdx;
+  const wrap = document.getElementById(`field-form-wrap-${sectionIdx}`);
+  wrap.innerHTML = `
+    <form id="new-field-form-${sectionIdx}" class="inline-field-form" autocomplete="off">
+      <input type="text" id="field-name-${sectionIdx}" required placeholder="Field Name">
+      <select id="field-type-${sectionIdx}">
+        <option value="text">Text</option>
+        <option value="textarea">Text Area</option>
+        <option value="number">Number</option>
+        <option value="dropdown">Dropdown</option>
+        <option value="radio">Radio Buttons</option>
+        <option value="checkbox">Checkbox</option>
+        <option value="image">Image Upload (Premium)</option>
+      </select>
+      <input type="text" id="field-help-${sectionIdx}" placeholder="Help text (optional)">
+      <input type="text" id="field-options-${sectionIdx}" placeholder="Options (comma separated)">
+      <label style="margin-right:1em;"><input type="checkbox" id="field-static-${sectionIdx}"> Static</label>
+      <label style="margin-right:1em;"><input type="checkbox" id="field-required-${sectionIdx}"> Required</label>
+      <label><input type="checkbox" id="field-premium-${sectionIdx}"> Premium Field</label>
+      <button type="submit">Save Field</button>
+      <button type="button" id="field-cancel-btn-${sectionIdx}" style="background:#777;">Cancel</button>
+      <div id="field-error-${sectionIdx}" class="error-message"></div>
+    </form>
+  `;
+  document.getElementById(`new-field-form-${sectionIdx}`).onsubmit = function(e) {
+    e.preventDefault();
+    const name = document.getElementById(`field-name-${sectionIdx}`).value.trim();
+    const type = document.getElementById(`field-type-${sectionIdx}`).value;
+    const help = document.getElementById(`field-help-${sectionIdx}`).value.trim();
+    const optionsRaw = document.getElementById(`field-options-${sectionIdx}`).value;
+    const staticField = document.getElementById(`field-static-${sectionIdx}`).checked;
+    const required = document.getElementById(`field-required-${sectionIdx}`).checked;
+    const premium = document.getElementById(`field-premium-${sectionIdx}`).checked && type === "image";
+    let options = [];
+    if (type === "dropdown" || type === "radio") {
+      options = optionsRaw.split(",").map(opt=>opt.trim()).filter(opt=>opt);
+    }
+    if (!name) {
+      document.getElementById(`field-error-${sectionIdx}`).textContent = "Field name required.";
+      return;
+    }
+    sections[sectionIdx].fields.push({name, type, static: staticField, required, help, options, premium});
+    wrap.innerHTML = '';
+    addingFieldToSectionIdx = null;
+    renderFieldsList(sectionIdx);
+  };
+  document.getElementById(`field-cancel-btn-${sectionIdx}`).onclick = function() {
+    wrap.innerHTML = '';
+    addingFieldToSectionIdx = null;
+  };
 }
-
-document.getElementById("section-select").onchange = function() {
-  currentSectionIdx = +this.value;
-  renderFieldsList(currentSectionIdx);
-};
-
-// STEP 3: Add Fields
-document.getElementById("new-field-form").onsubmit = function(e) {
-  e.preventDefault();
-  document.getElementById("fields-error").textContent = "";
-  const name = document.getElementById("field-name").value.trim();
-  const type = document.getElementById("field-type").value;
-  const help = document.getElementById("field-help").value.trim();
-  const optionsRaw = document.getElementById("field-options").value;
-  const staticField = document.getElementById("field-static").checked;
-  const required = document.getElementById("field-required").checked;
-  const premium = document.getElementById("field-premium").checked && type === "image";
-  let options = [];
-  if (type === "dropdown" || type === "radio") {
-    options = optionsRaw.split(",").map(opt=>opt.trim()).filter(opt=>opt);
-  }
-  if (!name) {
-    document.getElementById("fields-error").textContent = "Field name required.";
-    return;
-  }
-  sections[currentSectionIdx].fields.push({name, type, static: staticField, required, help, options, premium});
-  renderFieldsList(currentSectionIdx);
-  this.reset();
-};
 
 function renderFieldsList(sectionIdx) {
-  const fieldsListDiv = document.getElementById("fields-list");
-  const fields = sections[sectionIdx].fields;
+  const fieldsListDiv = document.getElementById(`fields-list-${sectionIdx}`);
   fieldsListDiv.innerHTML = "";
+  const fields = sections[sectionIdx].fields;
   fields.forEach((field, idx) => {
     const div = document.createElement("div");
     div.className = "field-card";
@@ -349,28 +367,30 @@ function renderFieldsList(sectionIdx) {
       ${field.premium ? "<span style='color:#f39c12;margin-left:0.4em;'>[premium]</span>" : ""}
       ${field.help ? `<div style="color:#666;">${field.help}</div>` : ""}
       ${field.options && field.options.length ? `<div style='color:#999;'>Options: ${field.options.join(", ")}</div>` : ""}
-      <button class="remove-btn" data-idx="${idx}">Remove Field</button>
+      <button class="remove-btn" data-idx="${idx}">Delete Field</button>
     `;
     fieldsListDiv.appendChild(div);
-  });
-  Array.from(fieldsListDiv.querySelectorAll("button.remove-btn")).forEach(btn => {
-    btn.onclick = function() {
-      fields.splice(+btn.dataset.idx, 1);
+    div.querySelector(".remove-btn").onclick = function() {
+      fields.splice(idx, 1);
       renderFieldsList(sectionIdx);
     };
   });
 }
 
-document.getElementById("fields-done-btn").onclick = function() {
-  let valid = true;
-  sections.forEach(section => {
-    if (!section.fields.length) valid = false;
-  });
-  if (!valid) {
-    document.getElementById("fields-error").textContent = "Each section needs at least one field.";
-    return;
+// Preview & Save
+document.getElementById("preview-btn").onclick = function() {
+  // Validate: at least one section and each section has at least one field
+  let valid = true, errorMsg = "";
+  if (!templateLabel || !templateKey) {
+    valid = false; errorMsg = "Missing template name.";
+  } else if (!sections.length) {
+    valid = false; errorMsg = "Add at least one section before previewing.";
+  } else if (!sections.every(s => s.fields.length)) {
+    valid = false; errorMsg = "Each section needs at least one field.";
   }
-  document.getElementById("step-fields").style.display = "none";
+  document.getElementById("section-error").textContent = valid ? "" : errorMsg;
+  if (!valid) return;
+  document.getElementById("builder-area").style.display = "none";
   document.getElementById("step-preview").style.display = "";
   renderPreview();
 };
@@ -401,6 +421,12 @@ function renderPreview() {
   `;
 }
 
+document.getElementById("edit-btn").onclick = function() {
+  document.getElementById("step-preview").style.display = "none";
+  document.getElementById("builder-area").style.display = "";
+};
+
+// Save
 document.getElementById("save-template-btn").onclick = async function() {
   const templateRef = database.ref('global_templates/' + templateKey);
   const existing = await templateRef.get();
