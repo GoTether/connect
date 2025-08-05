@@ -6,35 +6,183 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0;}
-    #main { max-width: 480px; margin: 5em auto; background: #fff; padding: 2em; border-radius: 18px; box-shadow: 0 4px 16px #e0e4eb; text-align:center;}
+    #main { max-width: 580px; margin: 4em auto; background: #fff; padding: 2em; border-radius: 18px; box-shadow: 0 4px 16px #e0e4eb; text-align:center;}
     .header { font-size: 2em; font-weight: bold; margin-bottom: 0.4em; color: #2b90ff;}
     .subtitle { color: #666; margin-bottom: 2em; font-size: 1.13em;}
     .select-btn { background: #2b90ff; color: #fff; border: none; border-radius: 10px; padding: 1.2em 2.5em; font-size: 1.18em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; margin: 1em 0;}
     .select-btn:hover { background: #176fd2;}
     .desc {margin-bottom:2em; color:#333; font-size:1.04em;}
     .terra-icon, .aura-icon {font-size:2em; vertical-align:middle; margin-right:0.2em;}
+    .section {text-align:left; margin:2em 0 1em 0; padding:1em 0;}
+    .section-title {font-weight:bold; font-size:1.2em; margin-bottom:.3em;}
+    .field-row {margin-bottom:1em;}
+    .field-label {font-weight:500; margin-bottom:.2em; display:block;}
+    input[type="text"], textarea {width:95%; padding:.7em; border-radius:8px; border:1px solid #dbe4f3; font-size:1em; margin-bottom:.3em;}
+    textarea {min-height:60px;}
+    .fields-list {margin-bottom:1em;}
+    .fields-list input[type="text"] {width:80%; display:inline-block;}
+    .remove-field {background:#fbb; border:none; border-radius:6px; padding:0.3em 0.8em; margin-left:0.6em; cursor:pointer;}
+    .add-field-btn {background:#2b90ff; color:#fff; border:none; border-radius:6px; padding:0.45em 1.2em; margin-top:.5em; cursor:pointer;}
+    .add-field-btn:hover {background:#176fd2;}
+    .preview-box {background:#faf7ff; border:1px solid #e5d8f7; border-radius:10px; padding:1em; margin-top:2em;}
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 <div id="main">
   <div class="header">Template Creator</div>
-  <div class="subtitle">
+  <div class="subtitle" id="landing-subtitle">
     Choose which type of template you'd like to create.<br>
     <span style="color:#2b90ff;">Terra</span> is for unique, physical objects or places.<br>
     <span style="color:#c678dd;">Aura</span> is for abstract types or brands that share a locked template.
   </div>
-  <div class="desc">
-    <span class="terra-icon">&#128506;</span>
-    <b>Terra Template</b><br>
-    For things like cars, properties, devices, etc.<br>
-    <button class="select-btn" onclick="window.location.href='terra_template_creator.html'">Create Terra Template</button>
+  <div id="landing-choice">
+    <div class="desc">
+      <span class="terra-icon">&#128506;</span>
+      <b>Terra Template</b><br>
+      For things like cars, properties, devices, etc.<br>
+      <button class="select-btn" onclick="window.location.href='terra_template_creator.html'">Create Terra Template</button>
+    </div>
+    <div class="desc">
+      <span class="aura-icon">&#127752;</span>
+      <b>Aura Template</b><br>
+      For categories like beer brands, books, whiskey, etc. Every Aura uses a locked template.<br>
+      <button class="select-btn" onclick="showAuraCreator()">Create Aura Template</button>
+    </div>
   </div>
-  <div class="desc">
-    <span class="aura-icon">&#127752;</span>
-    <b>Aura Template</b><br>
-    For categories like beer brands, books, movies, etc. Every Aura uses a locked template.<br>
-    <button class="select-btn" onclick="window.location.href='aura_template_creator.html'">Create Aura Template</button>
+  <!-- Aura Template Creator Form -->
+  <div id="aura-creator" class="hidden">
+    <div class="section">
+      <div class="section-title">Aura Tether Static Info</div>
+      <div class="field-row">
+        <label class="field-label">Tether Type (e.g., Beer, Whiskey, Book)</label>
+        <input type="text" id="tetherType" placeholder="Whiskey">
+      </div>
+      <div class="field-row">
+        <label class="field-label">Description (for brand/tether page)</label>
+        <textarea id="tetherDesc" placeholder="Describe this type, e.g., 'Single malt Scotch whiskies'"></textarea>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Image/Logo (optional)</label>
+        <input type="file" id="tetherImage">
+      </div>
+      <div class="field-row">
+        <label class="field-label">External Links</label>
+        <input type="text" id="linkLabel1" placeholder="Label (e.g., Official Site)">
+        <input type="text" id="linkUrl1" placeholder="URL">
+      </div>
+      <!-- Add more links as needed in future -->
+    </div>
+    <div class="section">
+      <div class="section-title">User Diary Entry Fields (Questions)</div>
+      <div class="fields-list" id="fieldsList">
+        <!-- Dynamically added fields -->
+      </div>
+      <div class="field-row">
+        <input type="text" id="newFieldName" placeholder="Question/field label (e.g., 'Where did you drink this?')">
+        <select id="newFieldType">
+          <option value="text">Text</option>
+          <option value="textarea">Long Text</option>
+          <option value="rating">Rating (1-10)</option>
+          <option value="stars">Stars (1-5)</option>
+          <option value="dropdown">Dropdown</option>
+          <option value="photo">Photo Upload</option>
+        </select>
+        <button class="add-field-btn" onclick="addField()">Add Field</button>
+      </div>
+    </div>
+    <button class="select-btn" style="margin-top:2em;" onclick="previewAuraTemplate()">Preview Template</button>
+    <button class="select-btn" style="margin-top:2em; background:#44c678;" onclick="saveAuraTemplate()">Save Aura Template</button>
+    <button class="select-btn" style="margin-top:2em; background:#e5e5e5; color:#333;" onclick="backToLanding()">Back</button>
+    <div id="aura-preview" class="preview-box hidden"></div>
   </div>
 </div>
+<script>
+  // Store entry fields
+  let entryFields = [];
+
+  function showAuraCreator() {
+    document.getElementById('landing-choice').classList.add('hidden');
+    document.getElementById('landing-subtitle').classList.add('hidden');
+    document.getElementById('aura-creator').classList.remove('hidden');
+  }
+
+  function backToLanding() {
+    document.getElementById('aura-creator').classList.add('hidden');
+    document.getElementById('landing-choice').classList.remove('hidden');
+    document.getElementById('landing-subtitle').classList.remove('hidden');
+    entryFields = [];
+    document.getElementById('fieldsList').innerHTML = '';
+    document.getElementById('aura-preview').classList.add('hidden');
+    document.getElementById('aura-preview').innerHTML = '';
+  }
+
+  function addField() {
+    const name = document.getElementById('newFieldName').value.trim();
+    const type = document.getElementById('newFieldType').value;
+    if (!name) return;
+    entryFields.push({label: name, type});
+    renderFields();
+    document.getElementById('newFieldName').value = '';
+    document.getElementById('newFieldType').value = 'text';
+  }
+
+  function removeField(idx) {
+    entryFields.splice(idx, 1);
+    renderFields();
+  }
+
+  function renderFields() {
+    const list = document.getElementById('fieldsList');
+    list.innerHTML = '';
+    entryFields.forEach((field, idx) => {
+      list.innerHTML += `
+        <div>
+          <span style="font-weight:500;">${field.label}</span>
+          <span style="font-size:0.95em; color:#888;">[${field.type}]</span>
+          <button class="remove-field" onclick="removeField(${idx})">Remove</button>
+        </div>
+      `;
+    });
+  }
+
+  function previewAuraTemplate() {
+    const type = document.getElementById('tetherType').value.trim();
+    const desc = document.getElementById('tetherDesc').value.trim();
+    const preview = document.getElementById('aura-preview');
+    let html = `<div><b>Tether Type:</b> ${type || '<i>(none)</i>'}</div>`;
+    html += `<div><b>Description:</b> ${desc || '<i>(none)</i>'}</div>`;
+    html += `<div style="margin-top:1em;"><b>User Diary Entry Fields:</b></div>`;
+    if (entryFields.length === 0) html += `<div><i>No entry fields added yet.</i></div>`;
+    else {
+      html += '<ul>';
+      entryFields.forEach(field => {
+        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span></li>`;
+      });
+      html += '</ul>';
+    }
+    preview.innerHTML = html;
+    preview.classList.remove('hidden');
+  }
+
+  function saveAuraTemplate() {
+    const type = document.getElementById('tetherType').value.trim();
+    const desc = document.getElementById('tetherDesc').value.trim();
+    let image = document.getElementById('tetherImage').files[0] || null;
+    const linkLabel = document.getElementById('linkLabel1').value.trim();
+    const linkUrl = document.getElementById('linkUrl1').value.trim();
+    // For demo, just build object and log (replace with Firebase save logic)
+    const template = {
+      tetherType: type,
+      description: desc,
+      image,
+      links: linkLabel && linkUrl ? [{label: linkLabel, url: linkUrl}] : [],
+      entryFields
+    };
+    alert('Aura template saved!\n\n' + JSON.stringify(template, null, 2));
+    // TODO: Replace with actual backend save logic (e.g., Firebase)
+    backToLanding();
+  }
+</script>
 </body>
 </html>
