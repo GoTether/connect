@@ -2,251 +2,254 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Template Manager (Tether)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <title>Template Manager</title>
   <style>
-    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0; }
-    #main { max-width: 950px; margin: 2em auto; background: #fff; padding: 2em 2em 3em 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
-    .header { font-size: 2em; font-weight: bold; margin-bottom: 0.4em; color: #2b90ff; }
-    .subtitle { color: #666; margin-bottom: 1.3em; font-size: 1.15em; }
-    .admin-btn { background: #e74c3c; color: #fff; border: none; border-radius: 8px; padding: 0.7em 1.5em; font-size: 1.1em; cursor: pointer; box-shadow: 0 2px 6px #f6d9d7; margin-top:0.3em; margin-right:0.7em;}
-    .admin-btn:hover { background: #c0392b; }
-    .search-bar { width: 100%; max-width: 340px; font-size: 1.15em; padding: 0.7em; border-radius: 7px; border: 1px solid #bbb; margin-bottom: 2em; }
-    .template-list { margin-top: 1em; }
-    .template-card { background: #f2f6fa; border-radius: 12px; margin-bottom: 1.5em; padding: 1.6em 2em; box-shadow: 0 2px 7px #e0e4eb; position: relative; display: flex; flex-direction: column; gap: 0.8em;}
-    .template-label { font-size: 1.3em; font-weight: bold; color: #2b90ff; }
-    .template-key { color: #aaa; word-break: break-all;}
-    .template-actions { margin-top: 0.7em; display: flex; gap: 0.7em;}
-    .action-btn { background: #2b90ff; color: #fff; border: none; border-radius: 7px; padding: 0.5em 1em; font-size: 1em; cursor: pointer; box-shadow: 0 2px 6px #d8e6f9; }
-    .action-btn:hover:not(:disabled) { background: #176fd2;}
-    .delete-btn { background: #e74c3c; color: #fff; }
-    .delete-btn:hover { background: #c0392b; }
-    .rename-form { display: flex; gap: 0.5em; margin-top:0.6em;}
-    .rename-input { font-size: 1em; padding: 0.4em; border-radius: 6px; border: 1px solid #bbb;}
-    .rename-btn, .cancel-rename-btn { background: #27ae60; color: #fff; border: none; border-radius: 7px; padding: 0.3em 1em; font-size: 1em; cursor: pointer;}
-    .cancel-rename-btn { background: #e74c3c;}
-    .rename-btn:hover { background: #1a7342;}
-    .cancel-rename-btn:hover { background: #c0392b;}
-    .error-message { color: #e74c3c; font-weight: bold; margin-top: 0.7em;}
-    .success-message { color: #27ae60; font-weight: bold; margin-top: 0.7em;}
-    .upload-block { background: #f6fdfc; border-radius: 12px; padding: 2em; margin-bottom: 2em; box-shadow: 0 2px 8px #e0f6f2;}
-    .upload-label { font-size: 1.13em; font-weight: 500; margin-bottom: 0.6em;}
-    .upload-btn { background: #2b90ff; color: #fff; border: none; border-radius: 7px; padding: 0.7em 2em; font-size: 1.1em; cursor: pointer; }
-    .upload-btn:hover { background: #176fd2;}
-    .upload-status { margin-top: 1em; }
-    .upload-tip { color:#666; font-size:1em; margin-top:0.2em;}
-    @media (max-width: 700px) { #main { padding: 1em; } .template-card { padding: 1em; } .upload-block { padding: 1em; } }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+    .container { max-width: 900px; margin: 2em auto; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px #ddd; padding: 2em; }
+    h1 { margin-top: 0; }
+    .template-type-switch { display: flex; gap: 12px; margin-bottom: 2em; }
+    .type-btn {
+      border: none;
+      background: #eee;
+      color: #333;
+      padding: 0.6em 2em;
+      border-radius: 3px;
+      font-size: 1.1em;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background .2s;
+    }
+    .type-btn.active { background: #44c678; color: #fff; }
+    .template-list { margin-bottom: 2em; }
+    .template-card {
+      padding: 1em;
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 1em;
+      box-shadow: 0 1px 2px #eee;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3em;
+    }
+    .template-label { font-weight: bold; font-size: 1.2em; }
+    .template-key { font-size: 0.98em; color: #888; }
+    .template-actions { margin-top: 0.5em; display: flex; gap: 6px; }
+    .action-btn, .delete-btn {
+      background: #eee;
+      border: none;
+      padding: 0.3em 1.2em;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background .2s;
+      font-weight: bold;
+    }
+    .action-btn:hover { background: #d2f0e0; }
+    .delete-btn { background: #e44; color: #fff; }
+    .delete-btn:hover { background: #b22; }
+    .search-bar { margin-bottom: 1em; width: 100%; padding: 0.5em; font-size: 1.05em; }
+    .upload-section { margin-bottom: 2em; }
+    .upload-status { color: #c44; font-size: 0.98em; margin-top: 0.3em; }
   </style>
 </head>
 <body>
-<div id="main">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <span class="header">Template Manager</span>
-    <button class="admin-btn" onclick="window.location.href='/connect/admin.html'">Back to Admin</button>
-  </div>
-  <div class="subtitle">
-    Search, view, rename, delete, and <b>bulk upload</b> templates.<br>
-    <span style="color:#2b90ff;">You can now upload a single JSON file containing one or more templates!</span>
-  </div>
-  <div class="upload-block">
-    <div class="upload-label">Bulk Upload Templates</div>
-    <input type="file" id="upload-input" accept=".json">
-    <button class="upload-btn" id="upload-btn">Upload</button>
-    <div class="upload-tip">
-      <b>How it works:</b><br>
-      - Prepare a JSON file with your templates.<br>
-      - You can include <b>one template object</b>, or <b>an array of template objects</b> in a single file.<br>
-      - Each template should have <b>key, label, sections (with fields), and version</b>.<br>
-      - After upload, your templates will be ready to use and manage here.<br>
-      <span style="color:#666;font-size:0.95em;">Need help formatting your templates? <a href="#" onclick="alert('Make sure your JSON matches the required structure. Each template should include key, label, sections (with fields), and version. See documentation or ask support for a sample.')">See example</a></span>
+  <div class="container">
+    <h1>Template Manager</h1>
+    <div class="template-type-switch">
+      <button id="terra-btn" class="type-btn active">Terra</button>
+      <button id="aura-btn" class="type-btn">Aura</button>
     </div>
-    <div id="upload-status" class="upload-status"></div>
+    <input id="search-bar" class="search-bar" placeholder="Search templates..." />
+    <div class="upload-section">
+      <input type="file" id="upload-input" accept=".json">
+      <button id="upload-btn" class="action-btn">Bulk Upload</button>
+      <span id="upload-status" class="upload-status"></span>
+    </div>
+    <div id="template-list" class="template-list"></div>
   </div>
-  <input type="text" class="search-bar" id="search-bar" placeholder="Search templates...">
-  <div id="template-list" class="template-list"></div>
-</div>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-  authDomain: "tether-71e0c.firebaseapp.com",
-  databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-  projectId: "tether-71e0c",
-  storageBucket: "tether-71e0c.appspot.com",
-  messagingSenderId: "277809008742",
-  appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-  measurementId: "G-X7ZQ6DJYEN"
-};
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+  <script>
+    // --- Template Data Stores ---
+    let terraTemplates = [];
+    let auraTemplates = [];
+    let activeType = "terra";
+    let renameMode = {}; // Track which template is in rename mode
 
-let templates = []; // {key, label, sections, version}
-let filteredTemplates = [];
-let renameMode = {}; // key: true/false
+    // --- UI Switch Logic ---
+    document.getElementById("terra-btn").onclick = function() {
+      setActiveType("terra");
+    };
+    document.getElementById("aura-btn").onclick = function() {
+      setActiveType("aura");
+    };
 
-function fetchTemplates() {
-  database.ref('global_templates').get().then(snap => {
-    templates = [];
-    snap.forEach(child => {
-      const val = child.val();
-      if (val && val.key && val.label) templates.push(val);
-    });
-    renderTemplates();
-  });
-}
+    function setActiveType(type) {
+      activeType = type;
+      document.getElementById("terra-btn").classList.toggle("active", type === "terra");
+      document.getElementById("aura-btn").classList.toggle("active", type === "aura");
+      document.getElementById("upload-status").textContent = "";
+      renderTemplates();
+    }
 
-function renderTemplates() {
-  const list = document.getElementById("template-list");
-  const searchVal = document.getElementById("search-bar").value.trim().toLowerCase();
-  filteredTemplates = templates.filter(t =>
-    t.key.toLowerCase().includes(searchVal) ||
-    t.label.toLowerCase().includes(searchVal)
-  );
-  list.innerHTML = "";
-  if (!filteredTemplates.length) {
-    list.innerHTML = `<div style="color:#aaa;margin-top:2em;font-size:1.15em;">No templates found.</div>`;
-    return;
-  }
-  filteredTemplates.forEach(t => {
-    const card = document.createElement("div");
-    card.className = "template-card";
-    if (renameMode[t.key]) {
-      // Rename UI
-      card.innerHTML = `
-        <form class="rename-form" id="rename-form-${t.key}">
-          <input type="text" class="rename-input" id="rename-input-${t.key}" value="${t.label}" required>
-          <button type="submit" class="rename-btn">Save</button>
-          <button type="button" class="cancel-rename-btn" id="cancel-rename-btn-${t.key}">Cancel</button>
-        </form>
-        <div class="template-key">${t.key}</div>
-        <div id="rename-error-${t.key}" class="error-message"></div>
-      `;
-      card.querySelector(`#rename-form-${t.key}`).onsubmit = function(e) {
-        e.preventDefault();
-        const newLabel = card.querySelector(`#rename-input-${t.key}`).value.trim();
-        if (!newLabel) {
-          card.querySelector(`#rename-error-${t.key}`).textContent = "Label cannot be empty.";
+    // --- Search Logic ---
+    document.getElementById("search-bar").oninput = renderTemplates;
+
+    // --- Template Render Logic ---
+    function renderTemplates() {
+      const search = document.getElementById("search-bar").value.trim().toLowerCase();
+      let templates = activeType === "terra" ? terraTemplates : auraTemplates;
+      let list = document.getElementById("template-list");
+      list.innerHTML = "";
+      templates.filter(t => {
+        if (!search) return true;
+        return (t.label && t.label.toLowerCase().includes(search)) ||
+               (t.key && t.key.toLowerCase().includes(search));
+      }).forEach(t => {
+        let card = document.createElement("div");
+        card.className = "template-card";
+        if (renameMode[t.key]) {
+          // Rename UI
+          card.innerHTML = `
+            <span class="template-label">${t.label}</span>
+            <div class="template-key">${t.key}</div>
+            <input type="text" id="rename-input-${t.key}" value="${t.label}" style="font-size:1.05em; margin-top:8px;">
+            <div class="template-actions">
+              <button class="action-btn" id="rename-save-btn-${t.key}">Save</button>
+              <button class="action-btn" id="rename-cancel-btn-${t.key}">Cancel</button>
+            </div>
+          `;
+          card.querySelector(`#rename-save-btn-${t.key}`).onclick = function() {
+            const val = card.querySelector(`#rename-input-${t.key}`).value.trim();
+            if (val) { t.label = val; }
+            renameMode[t.key] = false;
+            renderTemplates();
+          };
+          card.querySelector(`#rename-cancel-btn-${t.key}`).onclick = function() {
+            renameMode[t.key] = false;
+            renderTemplates();
+          };
+        } else {
+          // Normal UI
+          card.innerHTML = `
+            <span class="template-label">${t.label}</span>
+            <div class="template-key">${t.key}</div>
+            <div class="template-actions">
+              <button class="action-btn" id="rename-btn-${t.key}">Rename</button>
+              <button class="delete-btn action-btn" id="delete-btn-${t.key}">Delete</button>
+            </div>
+          `;
+          card.querySelector(`#rename-btn-${t.key}`).onclick = function() {
+            renameMode[t.key] = true;
+            renderTemplates();
+          };
+          card.querySelector(`#delete-btn-${t.key}`).onclick = function() {
+            if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
+              if (activeType === "terra") {
+                terraTemplates = terraTemplates.filter(x => x.key !== t.key);
+              } else {
+                auraTemplates = auraTemplates.filter(x => x.key !== t.key);
+              }
+              renderTemplates();
+            }
+          };
+        }
+        list.appendChild(card);
+      });
+    }
+
+    // --- Bulk Upload Logic ---
+    document.getElementById("upload-btn").onclick = function() {
+      const input = document.getElementById("upload-input");
+      document.getElementById("upload-status").textContent = "";
+      if (!input.files[0]) {
+        document.getElementById("upload-status").textContent = "Please select a .json file to upload.";
+        return;
+      }
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let data;
+        try {
+          data = JSON.parse(e.target.result);
+        } catch (err) {
+          document.getElementById("upload-status").textContent = `Error parsing JSON: ${err.message}`;
           return;
         }
-        database.ref('global_templates/' + t.key + '/label').set(newLabel).then(() => {
-          t.label = newLabel;
-          renameMode[t.key] = false;
-          renderTemplates();
-        });
-      };
-      card.querySelector(`#cancel-rename-btn-${t.key}`).onclick = function() {
-        renameMode[t.key] = false;
-        renderTemplates();
-      };
-    } else {
-      // Normal UI
-      card.innerHTML = `
-        <span class="template-label">${t.label}</span>
-        <div class="template-key">${t.key}</div>
-        <div class="template-actions">
-          <button class="action-btn" id="rename-btn-${t.key}">Rename</button>
-          <button class="delete-btn action-btn" id="delete-btn-${t.key}">Delete</button>
-        </div>
-      `;
-      card.querySelector(`#rename-btn-${t.key}`).onclick = function() {
-        renameMode[t.key] = true;
-        renderTemplates();
-      };
-      card.querySelector(`#delete-btn-${t.key}`).onclick = function() {
-        if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
-          database.ref('global_templates/' + t.key).remove().then(() => {
-            templates = templates.filter(x => x.key !== t.key);
-            renderTemplates();
-          });
-        }
-      };
-    }
-    list.appendChild(card);
-  });
-}
-
-document.getElementById("search-bar").oninput = renderTemplates;
-
-// --- Bulk Upload Logic ---
-document.getElementById("upload-btn").onclick = function() {
-  const input = document.getElementById("upload-input");
-  document.getElementById("upload-status").textContent = "";
-  if (!input.files[0]) {
-    document.getElementById("upload-status").textContent = "Please select a .json file to upload.";
-    return;
-  }
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    let data;
-    try {
-      data = JSON.parse(e.target.result);
-    } catch (err) {
-      document.getElementById("upload-status").textContent = `Error parsing JSON: ${err.message}`;
-      return;
-    }
-    let toImport = [];
-    if (Array.isArray(data)) {
-      toImport = data;
-    } else if (typeof data === "object" && data !== null) {
-      toImport = [data];
-    } else {
-      document.getElementById("upload-status").textContent = `Invalid file structure. Should be an object or array of objects.`;
-      return;
-    }
-    // Validate all templates
-    let errors = [];
-    let imported = [];
-    let promises = [];
-    toImport.forEach((tpl, idx) => {
-      const fname = file.name;
-      let prefix = (toImport.length > 1) ? `Template #${idx+1}` : `Template`;
-      if (!tpl || typeof tpl !== "object") {
-        errors.push(`${prefix} in ${fname}: Not an object.`);
-        return;
-      }
-      // Validate required keys
-      if (!tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
-        errors.push(`${prefix} in ${fname}: Invalid template structure.`);
-        return;
-      }
-      // Validate sections and fields
-      let validSections = true;
-      for (const sec of tpl.sections) {
-        if (!sec.name || !sec.type || typeof sec.undeletable !== "boolean" || !Array.isArray(sec.fields)) {
-          validSections = false; break;
-        }
-        for (const f of sec.fields) {
-          if (!f.name || !f.type || typeof f.static !== "boolean" || typeof f.required !== "boolean") {
-            validSections = false; break;
+        let toImport = Array.isArray(data) ? data : [data];
+        let errors = [];
+        let imported = [];
+        toImport.forEach((tpl, idx) => {
+          if (activeType === "terra") {
+            // Validate Terra template
+            if (!tpl || typeof tpl !== "object" ||
+                !tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
+              errors.push(`Template #${idx+1}: Invalid template structure.`);
+              return;
+            }
+            let validSections = true;
+            for (const sec of tpl.sections) {
+              if (!sec.name || !sec.type || typeof sec.undeletable !== "boolean" || !Array.isArray(sec.fields)) {
+                validSections = false; break;
+              }
+              for (const f of sec.fields) {
+                if (!f.name || !f.type || typeof f.static !== "boolean" || typeof f.required !== "boolean") {
+                  validSections = false; break;
+                }
+              }
+            }
+            if (!validSections) {
+              errors.push(`Template #${idx+1}: Invalid sections or fields structure.`);
+              return;
+            }
+            imported.push(tpl);
+          } else {
+            // Validate Aura template
+            if (!tpl || typeof tpl !== "object" || !tpl.key || !tpl.label || !Array.isArray(tpl.fields)) {
+              errors.push(`Template #${idx+1}: Invalid Aura template structure.`);
+              return;
+            }
+            let validFields = true;
+            for (const f of tpl.fields) {
+              if (!f.label || !f.type) {
+                validFields = false;
+                break;
+              }
+              if (f.type === "dropdown" && (!Array.isArray(f.options) || f.options.length === 0)) {
+                validFields = false;
+                break;
+              }
+            }
+            if (!validFields) {
+              errors.push(`Template #${idx+1}: Invalid fields structure.`);
+              return;
+            }
+            if (tpl.links && !Array.isArray(tpl.links)) {
+              errors.push(`Template #${idx+1}: Links must be an array.`);
+              return;
+            }
+            imported.push(tpl);
           }
+        });
+        if (errors.length) {
+          document.getElementById("upload-status").textContent = errors.join(" | ");
+          return;
         }
-      }
-      if (!validSections) {
-        errors.push(`${prefix} in ${fname}: Invalid sections or fields structure.`);
-        return;
-      }
-      // All good, push to Firebase
-      promises.push(
-        database.ref('global_templates/' + tpl.key).set(tpl)
-          .then(() => imported.push(tpl.label))
-          .catch(err => errors.push(`${prefix} (${tpl.label}) error: ${err.message}`))
-      );
-    });
-    Promise.all(promises).then(() => {
-      let msg = "";
-      if (imported.length) msg += `Upload complete! Imported: ${imported.join(", ")}. `;
-      if (errors.length) msg += `Some errors: ${errors.join(" | ")}`;
-      document.getElementById("upload-status").textContent = msg || "No templates found in file.";
-      fetchTemplates();
-    });
-  };
-  reader.readAsText(file);
-};
+        if (activeType === "terra") {
+          terraTemplates = terraTemplates.concat(imported);
+        } else {
+          auraTemplates = auraTemplates.concat(imported);
+        }
+        renderTemplates();
+        document.getElementById("upload-status").textContent = "Templates imported successfully!";
+      };
+      reader.readAsText(file);
+    };
 
-// Initial fetch
-fetchTemplates();
-</script>
+    // --- Initial Data (optional: add sample templates here) ---
+    terraTemplates = []; // You can preload some templates if you want
+    auraTemplates = [];
+
+    // --- Initial Render ---
+    renderTemplates();
+  </script>
 </body>
 </html>
