@@ -268,7 +268,9 @@ function showFieldForm(sectionIdx) {
         <option value="image">Image Upload (Premium)</option>
       </select>
       <input type="text" id="field-help-${sectionIdx}" placeholder="Help text (optional)">
-      <input type="text" id="field-options-${sectionIdx}" placeholder="Options (comma separated)">
+      <div id="options-wrap-${sectionIdx}" style="display:none;">
+        <input type="text" id="field-options-${sectionIdx}" placeholder="Options (comma separated)">
+      </div>
       <label style="margin-right:1em;"><input type="checkbox" id="field-static-${sectionIdx}" ${sectionIdx === 0 ? 'checked disabled' : ''}> Static</label>
       <label style="margin-right:1em;"><input type="checkbox" id="field-required-${sectionIdx}"> Required</label>
       <label><input type="checkbox" id="field-premium-${sectionIdx}"> Premium Field</label>
@@ -277,17 +279,31 @@ function showFieldForm(sectionIdx) {
       <div id="field-error-${sectionIdx}" class="error-message"></div>
     </form>
   `;
+
+  // Show/hide options input for dropdowns only
+  const typeSelect = document.getElementById(`field-type-${sectionIdx}`);
+  const optionsWrap = document.getElementById(`options-wrap-${sectionIdx}`);
+  function toggleOptionsInput() {
+    if (typeSelect.value === "dropdown") {
+      optionsWrap.style.display = "";
+    } else {
+      optionsWrap.style.display = "none";
+    }
+  }
+  typeSelect.onchange = toggleOptionsInput;
+  toggleOptionsInput();
+
   document.getElementById(`new-field-form-${sectionIdx}`).onsubmit = function(e) {
     e.preventDefault();
     const name = document.getElementById(`field-name-${sectionIdx}`).value.trim();
     const type = document.getElementById(`field-type-${sectionIdx}`).value;
     const help = document.getElementById(`field-help-${sectionIdx}`).value.trim();
-    const optionsRaw = document.getElementById(`field-options-${sectionIdx}`).value;
+    const optionsRaw = document.getElementById(`field-options-${sectionIdx}`) ? document.getElementById(`field-options-${sectionIdx}`).value : "";
     const staticField = sectionIdx === 0 ? true : document.getElementById(`field-static-${sectionIdx}`).checked;
     const required = document.getElementById(`field-required-${sectionIdx}`).checked;
     const premium = document.getElementById(`field-premium-${sectionIdx}`).checked && type === "image";
     let options = [];
-    if (type === "dropdown" || type === "radio") {
+    if (type === "dropdown") {
       options = optionsRaw.split(",").map(opt=>opt.trim()).filter(opt=>opt);
     }
     if (!name) {
