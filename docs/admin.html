@@ -1,35 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tether Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
   <style>
-    body { background: #f7f8fa; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-    #main { max-width: 500px; margin: 3em auto; background: #fff; padding: 2em; border-radius: 16px; box-shadow: 0 4px 16px #e0e4eb; }
-    .admin-title { font-size: 2em; font-weight: bold; color: #2b90ff; letter-spacing: 0.03em; margin-bottom: 1.5em; text-align: center;}
-    .admin-section { margin-bottom: 2em; }
-    .admin-link { display: block; background: #2b90ff; color: #fff; border: none; border-radius: 12px; padding: 1.2em 2em; font-size: 1.25em; font-weight: 500; text-align: center; text-decoration: none; box-shadow: 0 2px 8px #d8e6f9; margin-bottom: 1em; transition: background 0.2s, box-shadow 0.2s;}
-    .admin-link:hover { background: #176fd2; box-shadow: 0 4px 14px #c8e0fa;}
-    .desc { color: #666; font-size: 1.05em; margin-bottom: 1em; text-align: center;}
-    @media (max-width: 600px) {
-      #main { padding: 1em; }
-      .admin-title { font-size: 1.4em;}
-      .admin-link { font-size: 1em; padding: 1em 1em;}
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin:0; }
+    .container { max-width: 700px; margin: 3em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ddd; padding: 2em; }
+    h1 { margin-top: 0; }
+    .nav { margin: 2em 0; display: flex; gap: 2em; }
+    .nav a {
+      display: block; padding: 1em 2em; background: #eee; border-radius: 4px;
+      font-weight: bold; color: #222; text-decoration: none; font-size: 1.2em;
+      transition: background 0.2s;
     }
+    .nav a:hover { background: #44c678; color: #fff; }
+    .stats { margin-bottom: 2em; color: #444; }
+    .user-info { font-size: 0.98em; color: #888; margin-bottom: 1em; }
   </style>
 </head>
 <body>
-<div id="main">
-  <div class="admin-title">Tether Admin</div>
-  <div class="admin-section">
-    <div class="desc">Create new templates for your organization.</div>
-    <a href="templatecreator.html" class="admin-link">Template Creator</a>
+  <div class="container">
+    <h1>Admin Dashboard</h1>
+    <div class="user-info">Logged in as: <span id="admin-email">admin@example.com</span></div>
+    <div class="stats" id="stats"></div>
+    <div class="nav">
+      <a href="/template-manager.html">📝 Template Manager</a>
+      <a href="/user-management.html">👥 User Management</a>
+      <a href="/settings.html">⚙️ Settings</a>
+    </div>
+    <button onclick="logout()">Logout</button>
   </div>
-  <div class="admin-section">
-    <div class="desc">Manage, rename, or delete existing templates.</div>
-    <a href="templatemanager.html" class="admin-link">Template Manager</a>
-  </div>
-</div>
+  <script>
+    // (Optional) Populate user info and stats here.
+    function logout() {
+      // Add your sign-out logic here
+      alert("Logging out...");
+      // window.location.href = '/login.html';
+    }
+    // (Optional) Fetch and show stats.
+    // document.getElementById("stats").textContent = "Total templates: ...";
+  </script>
 </body>
 </html>
