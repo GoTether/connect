@@ -2,661 +2,370 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Template Creator - Tether</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Template Creator</title>
   <style>
-    body { 
-      background: linear-gradient(135deg,#eaf2fb 0%,#f7f8fa 100%);
-      font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:0;
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 800px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #dadada; padding: 2em; }
+    h1 { margin-top: 0; }
+    .mode-switch { display: flex; gap: 1em; margin-bottom: 2em; }
+    .mode-btn {
+      border: none;
+      background: #eee;
+      color: #333;
+      padding: 0.6em 2em;
+      border-radius: 4px;
+      font-size: 1.1em;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background .2s, color .2s;
     }
-    #main { 
-      max-width: 880px; margin: 3em auto; background: #fff; 
-      padding: 3em 2.2em; border-radius: 30px; 
-      box-shadow: 0 8px 36px #dbe4f3, 0 1.5px 0 #fff inset;
+    .mode-btn.active-aura {
+      background: #44c678;
+      color: #fff;
     }
-    .admin-link {
-      display:inline-block; margin-bottom:2em; font-size:1em; 
-      color:#2b90ff; background:linear-gradient(90deg,#eaf2fb 70%,#dbe4f3 100%);
-      border-radius:14px; padding:0.8em 1.7em; text-decoration:none; font-weight:500; transition:.2s;
-      box-shadow: 0 1.5px 0 #fff inset;
-      border:1px solid #e5eaf7;
+    .mode-btn.active-terra {
+      background: #3286ff;
+      color: #fff;
     }
-    .admin-link:hover {background:#2b90ff; color:#fff;}
-    .header {
-      font-size: 2.5em; font-weight: bold; margin-bottom: 0.6em; 
-      color: #2b90ff; letter-spacing:.02em;
-      text-shadow: 0 1px 0 #fff, 0 2px 8px #eaf2fb;
+    .form-section { margin-bottom: 2em; }
+    label { display: block; margin-bottom: 0.4em; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 0.5em; margin-bottom: 1em; border-radius: 4px; border: 1px solid #ccc; font-size: 1em; }
+    .fields-list, .sections-list { margin-bottom: 1em; }
+    .field-card, .section-card {
+      background: #f2f2f2;
+      border-radius: 4px;
+      padding: 1em;
+      margin-bottom: 1em;
+      border: 1px solid #e0e0e0;
     }
-    .subtitle { color: #666; margin-bottom: 2.1em; font-size: 1.18em;}
-    .template-tabs {
-      display:flex; justify-content:center; gap:28px; margin-bottom:2.5em;
+    .field-actions, .section-actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
+    .action-btn {
+      background: #eee; border: none; border-radius: 3px;
+      font-weight: bold; cursor: pointer; padding: 0.3em 1.2em; transition: background .2s;
     }
-    .tab-btn {
-      background:linear-gradient(90deg,#faf7ff 60%,#eaf2fb 100%);
-      color:#2b90ff; border:none; border-radius:18px; 
-      padding:1em 2.7em; font-size:1.22em; cursor:pointer; font-weight:600; transition:.2s;
-      box-shadow:0 2px 8px #eaf2fb;
-      letter-spacing:.02em;
-      outline:none;
+    .action-btn:hover { background: #d2f0e0; }
+    .delete-btn { background: #e44; color: #fff; }
+    .delete-btn:hover { background: #b22; }
+    .add-btn { margin-top: 1em; background: #44c678; color: #fff; }
+    .add-btn:hover { background: #2a9c5d; }
+    .submit-btn {
+      background: #3286ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1.1em;
+      font-weight: bold;
+      padding: 0.8em 2.5em;
+      cursor: pointer;
+      transition: background .2s;
     }
-    .tab-btn.active, .tab-btn:focus {
-      background:linear-gradient(90deg,#2b90ff 65%,#44c678 100%);
-      color:#fff; box-shadow:0 3px 14px #c6d4ed;
-      transform:scale(1.04);
-    }
-    .section-card {
-      background:linear-gradient(120deg,#f3f6fb 80%,#eaf2fb 100%);
-      border-radius: 22px; box-shadow: 0 2px 16px #e7eaf2;
-      padding: 2em 1.5em 1.4em 1.5em; margin-bottom: 2em; text-align:left;
-      border:1.5px solid #eaf2fb;
-      transition:box-shadow .2s;
-    }
-    .section-card:hover {
-      box-shadow: 0 6px 24px #dbe4f3;
-    }
-    .section-title {
-      font-weight:bold; font-size:1.35em; margin-bottom:.7em; color:#2b90ff;
-      display:flex; align-items:center; gap:10px;
-      letter-spacing:.01em;
-    }
-    .section-title .icon {
-      font-size:1.3em;
-    }
-    .field-row {margin-bottom:1.35em;}
-    .field-label {font-weight:500; margin-bottom:.2em; display:block;}
-    input[type="text"], textarea, select {
-      width:97%; padding:1em; border-radius:12px; border:1.5px solid #c6d4ed; font-size:1.11em; margin-bottom:.3em;
-      box-shadow:0 1px 0 #fff inset,0 2px 8px #f3f6fb;
-      transition:box-shadow .2s,border .2s;
-      background:#f7f8fa;
-    }
-    input[type="text"]:focus, textarea:focus, select:focus {
-      border:1.5px solid #2b90ff; box-shadow:0 2px 12px #eaf2fb;
-      background:#fff;
-      outline:none;
-    }
-    textarea {min-height:70px;}
-    .fields-list,.static-fields-list,.links-list{margin-bottom:1em;}
-    .fields-list input[type="text"], .static-fields-list input[type="text"] {width:70%; display:inline-block;}
-    .remove-field, .remove-static-field, .remove-link-btn, .remove-option-btn {
-      background:linear-gradient(90deg,#fbb 60%,#f3f6fb 100%);
-      border:none; border-radius:8px; padding:0.42em 1.05em; margin-left:0.6em; cursor:pointer; font-size:1em; color:#a33; font-weight:600;
-      transition:.17s;
-    }
-    .remove-field:hover, .remove-static-field:hover, .remove-link-btn:hover, .remove-option-btn:hover {background:#fbb; color:#fff;}
-    .add-field-btn, .add-static-field-btn, .add-link-btn, .add-option-btn {
-      background:linear-gradient(90deg,#2b90ff 60%,#44c678 100%);
-      color:#fff; border:none; border-radius:14px; 
-      padding:0.65em 1.35em; margin-top:.5em; cursor:pointer; font-size:1.08em; font-weight:500;
-      box-shadow:0 2px 8px #eaf2fb;
-      transition:.17s;
-      letter-spacing:.01em;
-      outline:none;
-    }
-    .add-field-btn:hover, .add-static-field-btn:hover, .add-link-btn:hover, .add-option-btn:hover {background:#176fd2;}
-    .preview-box {
-      background:linear-gradient(120deg,#faf7ff 80%,#eaf2fb 100%);
-      border:1.5px solid #e5d8f7; border-radius:18px; padding:1.3em; margin-top:2em; font-size:1.09em;
-      box-shadow:0 2px 12px #eaf2fb;
-      transition:box-shadow .2s;
-      color:#444;
-    }
-    .preview-box ul{margin:0.5em 0 0 1.2em;}
-    .hidden { display: none; }
-    .desc {margin-bottom:1.7em; color:#333; font-size:1.12em;}
-    .terra-icon, .aura-icon {font-size:2em; vertical-align:middle; margin-right:0.2em;}
-    .dropdown-options {margin-bottom:0.5em;}
-    .dropdown-options input[type="text"] {width:65%; margin-right:8px;}
-    .image-upload {margin-top:10px;}
-    .link-row {display:flex; gap:8px; margin-bottom:8px;}
-    .link-row input[type="text"] {width:43%;}
-    .back-btn {margin-top:2em; background:#e5e5e5; color:#333;}
-    .back-btn:hover {background:#dbe4f3; color:#2b90ff;}
-    .hr {margin:2em 0 1em 0; border:0; border-top:1.5px solid #dbe4f3;}
-    @media (max-width:700px) {
-      #main {padding: 1em 0.4em;}
-      .section-card {padding:1em 0.4em;}
-      .template-tabs {flex-direction:column;gap:12px;}
-      .tab-btn {width:100%;padding:1em;}
-    }
+    .submit-btn:hover { background: #2462b3; }
+    .status { margin: 0.5em 0; color: #c44; }
   </style>
 </head>
 <body>
-<div id="main">
-  <a class="admin-link" href="admin.html">&#8592; Back to Admin Page</a>
-  <div class="header">Template Creator</div>
-  <div class="subtitle" id="landing-subtitle">
-    Choose which type of template you'd like to create.<br>
-    <span style="color:#2b90ff;">Terra</span> is for unique, physical objects or places.<br>
-    <span style="color:#c678dd;">Aura</span> is for abstract types or brands that share a locked template.
-  </div>
-  <div class="template-tabs">
-    <button class="tab-btn active" id="terraTab" onclick="showTerraCreator()"><span class="icon">&#128506;</span> Terra Template</button>
-    <button class="tab-btn" id="auraTab" onclick="showAuraCreator()"><span class="icon">&#127752;</span> Aura Template</button>
-  </div>
-  <!-- Terra Template Creator Form -->
-  <div id="terra-creator" class="section-card">
-    <div class="section-title"><span class="icon">&#128506;</span>Terra Tether Static Fields</div>
-    <div class="static-fields-list" id="staticFieldsList"></div>
-    <div class="field-row">
-      <input type="text" id="newStaticFieldName" placeholder="Static field label (e.g., 'VIN Number')">
-      <select id="newStaticFieldType" onchange="onStaticFieldTypeChange()">
-        <option value="text">Text</option>
-        <option value="textarea">Long Text</option>
-        <option value="photo">Photo Upload</option>
-        <option value="number">Number</option>
-        <option value="dropdown">Dropdown</option>
-      </select>
-      <div id="staticDropdownOptions" class="dropdown-options hidden">
-        <label style="font-size:0.97em; margin-right:4px;">Dropdown Options:</label>
-        <input type="text" class="staticOptionInput" placeholder="Option text">
-        <button class="add-option-btn" onclick="addStaticDropdownOption()">Add Option</button>
-        <div id="staticOptionsList"></div>
-      </div>
-      <button class="add-static-field-btn" onclick="addStaticField()">Add Static Field</button>
+  <div class="container">
+    <h1>Template Creator</h1>
+    <div class="mode-switch">
+      <button id="aura-btn" class="mode-btn active-aura">Aura</button>
+      <button id="terra-btn" class="mode-btn">Terra</button>
     </div>
-    <div class="hr"></div>
-    <div class="section-title"><span class="icon">&#128221;</span>Terra Tether Dynamic Diary Fields (User Entry Questions)</div>
-    <div class="fields-list" id="terraFieldsList"></div>
-    <div class="field-row">
-      <input type="text" id="terraNewFieldName" placeholder="Dynamic field label (e.g., 'Odometer Reading')">
-      <select id="terraNewFieldType" onchange="onTerraFieldTypeChange()">
-        <option value="text">Text</option>
-        <option value="textarea">Long Text</option>
-        <option value="rating">Rating (1-10)</option>
-        <option value="stars">Stars (1-5)</option>
-        <option value="dropdown">Dropdown</option>
-        <option value="photo">Photo Upload</option>
-      </select>
-      <div id="terraDropdownOptions" class="dropdown-options hidden">
-        <label style="font-size:0.97em; margin-right:4px;">Dropdown Options:</label>
-        <input type="text" class="terraOptionInput" placeholder="Option text">
-        <button class="add-option-btn" onclick="addTerraDropdownOption()">Add Option</button>
-        <div id="terraOptionsList"></div>
-      </div>
-      <button class="add-field-btn" onclick="addTerraField()">Add Dynamic Field</button>
-    </div>
-    <div style="margin-top:2em;">
-      <button class="add-field-btn" onclick="previewTerraTemplate()">Preview Template</button>
-      <button class="add-field-btn" style="background:#44c678;" onclick="saveTerraTemplate()">Save Terra Template</button>
-      <button class="add-field-btn back-btn" onclick="resetTerraCreator()">Reset</button>
-    </div>
-    <div id="terra-preview" class="preview-box hidden"></div>
-  </div>
-  <!-- Aura Template Creator Form -->
-  <div id="aura-creator" class="section-card hidden">
-    <div class="section-title"><span class="icon">&#127752;</span>Aura Tether Static Info</div>
-    <div class="field-row">
-      <input type="text" id="tetherType" placeholder="Tether Type (e.g., Whiskey)">
-    </div>
-    <div class="field-row">
-      <textarea id="tetherDesc" placeholder="Description (for brand/tether page)"></textarea>
-    </div>
-    <div class="field-row image-upload">
-      <label class="field-label">Image/Logo (optional)</label>
-      <input type="file" id="tetherImage">
-    </div>
-    <div class="section-title" style="margin-top:2em;"><span class="icon">&#128279;</span>External Links</div>
-    <div class="links-list" id="linksList">
-      <div class="link-row">
-        <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
-        <input type="text" placeholder="URL" class="linkUrl">
-        <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
-      </div>
-    </div>
-    <button class="add-link-btn" onclick="addLink()">Add Another Link</button>
-    <div class="hr"></div>
-    <div class="section-title"><span class="icon">&#128221;</span>User Diary Entry Fields (Questions)</div>
-    <div class="fields-list" id="fieldsList"></div>
-    <div class="field-row">
-      <input type="text" id="newFieldName" placeholder="Question/field label (e.g., 'Where did you drink this?')">
-      <select id="newFieldType" onchange="onFieldTypeChange()">
-        <option value="text">Text</option>
-        <option value="textarea">Long Text</option>
-        <option value="rating">Rating (1-10)</option>
-        <option value="stars">Stars (1-5)</option>
-        <option value="dropdown">Dropdown</option>
-        <option value="photo">Photo Upload</option>
-      </select>
-      <div id="dropdownOptions" class="dropdown-options hidden">
-        <label style="font-size:0.97em; margin-right:4px;">Dropdown Options:</label>
-        <input type="text" class="optionInput" placeholder="Option text">
-        <button class="add-option-btn" onclick="addDropdownOption()">Add Option</button>
-        <div id="optionsList"></div>
-      </div>
-      <button class="add-field-btn" onclick="addField()">Add Field</button>
-    </div>
-    <div style="margin-top:2em;">
-      <button class="add-field-btn" onclick="previewAuraTemplate()">Preview Template</button>
-      <button class="add-field-btn" style="background:#44c678;" onclick="saveAuraTemplate()">Save Aura Template</button>
-      <button class="add-field-btn back-btn" onclick="resetAuraCreator()">Reset</button>
-    </div>
-    <div id="aura-preview" class="preview-box hidden"></div>
-  </div>
-</div>
-<script>
-  // UI tab switch
-  function showTerraCreator() {
-    document.getElementById('terraTab').classList.add('active');
-    document.getElementById('auraTab').classList.remove('active');
-    document.getElementById('terra-creator').classList.remove('hidden');
-    document.getElementById('aura-creator').classList.add('hidden');
-  }
-  function showAuraCreator() {
-    document.getElementById('terraTab').classList.remove('active');
-    document.getElementById('auraTab').classList.add('active');
-    document.getElementById('terra-creator').classList.add('hidden');
-    document.getElementById('aura-creator').classList.remove('hidden');
-  }
 
-  // Terra: Static Fields
-  let staticFields = [];
-  let staticDropdownOptions = [];
-  // Terra: Dynamic Fields
-  let terraEntryFields = [];
-  let terraDropdownOptions = [];
-
-  // Aura template variables
-  let entryFields = [];
-  let dropdownOptions = [];
-  // Links (Aura)
-  function addLink() {
-    const linksList = document.getElementById('linksList');
-    const div = document.createElement('div');
-    div.className = 'link-row';
-    div.innerHTML = `
-      <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
-      <input type="text" placeholder="URL" class="linkUrl">
-      <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
-    `;
-    linksList.appendChild(div);
-  }
-  function removeLink(btn) {
-    btn.parentElement.remove();
-  }
-  function resetLinks() {
-    const linksList = document.getElementById('linksList');
-    linksList.innerHTML = `
-      <div class="link-row">
-        <input type="text" placeholder="Label (e.g., Official Site)" class="linkLabel">
-        <input type="text" placeholder="URL" class="linkUrl">
-        <button class="remove-link-btn" onclick="removeLink(this)">Remove</button>
+    <form id="template-form">
+      <!-- COMMON FIELDS -->
+      <div class="form-section">
+        <label for="template-label">Template Label</label>
+        <input type="text" id="template-label" required>
+        <label for="template-key">Template Key</label>
+        <input type="text" id="template-key" required>
       </div>
-    `;
-  }
 
-  // Terra Static Fields Logic
-  function addStaticField() {
-    const name = document.getElementById('newStaticFieldName').value.trim();
-    const type = document.getElementById('newStaticFieldType').value;
-    if (!name) return;
-    let field = {label: name, type};
-    if (type === 'dropdown') {
-      if (staticDropdownOptions.length === 0) {
-        alert('Please add at least one dropdown option.');
-        return;
-      }
-      field.options = [...staticDropdownOptions];
-    }
-    staticFields.push(field);
-    renderStaticFields();
-    document.getElementById('newStaticFieldName').value = '';
-    document.getElementById('newStaticFieldType').value = 'text';
-    resetStaticDropdownOptions();
-    document.getElementById('staticDropdownOptions').classList.add('hidden');
-  }
-  function removeStaticField(idx) {
-    staticFields.splice(idx, 1);
-    renderStaticFields();
-  }
-  function renderStaticFields() {
-    const list = document.getElementById('staticFieldsList');
-    list.innerHTML = '';
-    staticFields.forEach((field, idx) => {
-      let extra = '';
-      if (field.type === 'dropdown' && field.options) {
-        extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
-      }
-      list.innerHTML += `
-        <div>
-          <span style="font-weight:500;">${field.label}</span>
-          <span style="font-size:0.99em; color:#888;">[${field.type}]</span>${extra}
-          <button class="remove-static-field" onclick="removeStaticField(${idx})">Remove</button>
+      <!-- AURA MODE -->
+      <div id="aura-section">
+        <div class="fields-list" id="aura-fields-list"></div>
+        <button type="button" class="add-btn" id="add-aura-field">+ Add Aura Field</button>
+        <div class="form-section">
+          <label for="aura-links">Links (optional, comma separated URLs)</label>
+          <input type="text" id="aura-links">
         </div>
-      `;
-    });
-  }
-  function onStaticFieldTypeChange() {
-    const type = document.getElementById('newStaticFieldType').value;
-    if (type === 'dropdown') {
-      document.getElementById('staticDropdownOptions').classList.remove('hidden');
-    } else {
-      document.getElementById('staticDropdownOptions').classList.add('hidden');
-      resetStaticDropdownOptions();
-    }
-  }
-  function addStaticDropdownOption() {
-    const input = document.querySelector('.staticOptionInput');
-    const val = input.value.trim();
-    if (!val) return;
-    staticDropdownOptions.push(val);
-    renderStaticDropdownOptions();
-    input.value = '';
-  }
-  function removeStaticDropdownOption(idx) {
-    staticDropdownOptions.splice(idx, 1);
-    renderStaticDropdownOptions();
-  }
-  function renderStaticDropdownOptions() {
-    const optionsList = document.getElementById('staticOptionsList');
-    optionsList.innerHTML = '';
-    staticDropdownOptions.forEach((opt, idx) => {
-      optionsList.innerHTML += `
-        <div>
-          <span>${opt}</span>
-          <button class="remove-option-btn" onclick="removeStaticDropdownOption(${idx})">Remove</button>
-        </div>
-      `;
-    });
-  }
-  function resetStaticDropdownOptions() {
-    staticDropdownOptions = [];
-    renderStaticDropdownOptions();
-    document.querySelector('.staticOptionInput').value = '';
-  }
+      </div>
 
-  // Terra Dynamic Fields Logic
-  function addTerraField() {
-    const name = document.getElementById('terraNewFieldName').value.trim();
-    const type = document.getElementById('terraNewFieldType').value;
-    if (!name) return;
-    let field = {label: name, type};
-    if (type === 'dropdown') {
-      if (terraDropdownOptions.length === 0) {
-        alert('Please add at least one dropdown option.');
-        return;
-      }
-      field.options = [...terraDropdownOptions];
-    }
-    terraEntryFields.push(field);
-    renderTerraFields();
-    document.getElementById('terraNewFieldName').value = '';
-    document.getElementById('terraNewFieldType').value = 'text';
-    resetTerraDropdownOptions();
-    document.getElementById('terraDropdownOptions').classList.add('hidden');
-  }
-  function removeTerraField(idx) {
-    terraEntryFields.splice(idx, 1);
-    renderTerraFields();
-  }
-  function renderTerraFields() {
-    const list = document.getElementById('terraFieldsList');
-    list.innerHTML = '';
-    terraEntryFields.forEach((field, idx) => {
-      let extra = '';
-      if (field.type === 'dropdown' && field.options) {
-        extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
-      }
-      list.innerHTML += `
-        <div>
-          <span style="font-weight:500;">${field.label}</span>
-          <span style="font-size:0.99em; color:#888;">[${field.type}]</span>${extra}
-          <button class="remove-field" onclick="removeTerraField(${idx})">Remove</button>
+      <!-- TERRA MODE -->
+      <div id="terra-section" style="display:none;">
+        <div class="sections-list" id="terra-sections-list"></div>
+        <button type="button" class="add-btn" id="add-terra-section">+ Add Terra Section</button>
+        <div class="form-section">
+          <label for="terra-version">Version</label>
+          <input type="text" id="terra-version" required>
         </div>
-      `;
-    });
-  }
-  function onTerraFieldTypeChange() {
-    const type = document.getElementById('terraNewFieldType').value;
-    if (type === 'dropdown') {
-      document.getElementById('terraDropdownOptions').classList.remove('hidden');
-    } else {
-      document.getElementById('terraDropdownOptions').classList.add('hidden');
-      resetTerraDropdownOptions();
-    }
-  }
-  function addTerraDropdownOption() {
-    const input = document.querySelector('.terraOptionInput');
-    const val = input.value.trim();
-    if (!val) return;
-    terraDropdownOptions.push(val);
-    renderTerraDropdownOptions();
-    input.value = '';
-  }
-  function removeTerraDropdownOption(idx) {
-    terraDropdownOptions.splice(idx, 1);
-    renderTerraDropdownOptions();
-  }
-  function renderTerraDropdownOptions() {
-    const optionsList = document.getElementById('terraOptionsList');
-    optionsList.innerHTML = '';
-    terraDropdownOptions.forEach((opt, idx) => {
-      optionsList.innerHTML += `
-        <div>
-          <span>${opt}</span>
-          <button class="remove-option-btn" onclick="removeTerraDropdownOption(${idx})">Remove</button>
-        </div>
-      `;
-    });
-  }
-  function resetTerraDropdownOptions() {
-    terraDropdownOptions = [];
-    renderTerraDropdownOptions();
-    document.querySelector('.terraOptionInput').value = '';
-  }
+      </div>
 
-  // Preview and Save (Terra)
-  function previewTerraTemplate() {
-    const preview = document.getElementById('terra-preview');
-    let html = `<div><b>Static Fields:</b></div>`;
-    if (staticFields.length === 0) html += `<div><i>No static fields added yet.</i></div>`;
-    else {
-      html += '<ul>';
-      staticFields.forEach(field => {
-        let extra = '';
-        if (field.type === 'dropdown' && field.options)
-          extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
-        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span>${extra}</li>`;
+      <button type="submit" class="submit-btn">Create Template</button>
+      <div class="status" id="status"></div>
+    </form>
+  </div>
+
+  <script>
+    // --- Mode Switching ---
+    let mode = 'aura';
+
+    const auraBtn = document.getElementById('aura-btn');
+    const terraBtn = document.getElementById('terra-btn');
+    const auraSection = document.getElementById('aura-section');
+    const terraSection = document.getElementById('terra-section');
+
+    auraBtn.onclick = () => setMode('aura');
+    terraBtn.onclick = () => setMode('terra');
+
+    function setMode(newMode) {
+      mode = newMode;
+      if (mode === 'aura') {
+        auraBtn.classList.add('active-aura');
+        auraBtn.classList.remove('active-terra');
+        terraBtn.classList.remove('active-terra');
+        terraBtn.classList.remove('active-aura');
+        terraSection.style.display = 'none';
+        auraSection.style.display = '';
+      } else {
+        terraBtn.classList.add('active-terra');
+        terraBtn.classList.remove('active-aura');
+        auraBtn.classList.remove('active-terra');
+        auraBtn.classList.remove('active-aura');
+        auraSection.style.display = 'none';
+        terraSection.style.display = '';
+      }
+    }
+
+    // --- AURA FIELDS LOGIC ---
+    let auraFields = [];
+
+    function renderAuraFields() {
+      const list = document.getElementById('aura-fields-list');
+      list.innerHTML = '';
+      auraFields.forEach((f, idx) => {
+        const card = document.createElement('div');
+        card.className = 'field-card';
+        card.innerHTML = `
+          <label>Field Label</label>
+          <input type="text" value="${f.label || ''}" onchange="this.value && (auraFields[${idx}].label = this.value)">
+          <label>Type</label>
+          <select onchange="auraFields[${idx}].type = this.value">
+            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Text</option>
+            <option value="number" ${f.type === 'number' ? 'selected' : ''}>Number</option>
+            <option value="dropdown" ${f.type === 'dropdown' ? 'selected' : ''}>Dropdown</option>
+          </select>
+          <div id="aura-options-${idx}" style="display:${f.type === 'dropdown' ? 'block' : 'none'};">
+            <label>Dropdown Options (comma separated)</label>
+            <input type="text" value="${f.options ? f.options.join(',') : ''}" 
+              onchange="auraFields[${idx}].options = this.value.split(',').map(x => x.trim()).filter(Boolean)">
+          </div>
+          <div class="field-actions">
+            <button type="button" class="delete-btn action-btn" onclick="removeAuraField(${idx})">Delete Field</button>
+          </div>
+        `;
+        // Attach dropdown show/hide on field type change
+        setTimeout(() => {
+          const sel = card.querySelector('select');
+          sel.onchange = function() {
+            auraFields[idx].type = this.value;
+            renderAuraFields();
+          };
+        }, 0);
+        list.appendChild(card);
       });
-      html += '</ul>';
     }
-    html += `<div style="margin-top:1em;"><b>Dynamic Diary Fields (User Entry Questions):</b></div>`;
-    if (terraEntryFields.length === 0) html += `<div><i>No dynamic fields added yet.</i></div>`;
-    else {
-      html += '<ul>';
-      terraEntryFields.forEach(field => {
-        let extra = '';
-        if (field.type === 'dropdown' && field.options)
-          extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
-        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span>${extra}</li>`;
-      });
-      html += '</ul>';
-    }
-    preview.innerHTML = html;
-    preview.classList.remove('hidden');
-  }
-  function saveTerraTemplate() {
-    const template = {
-      staticFields,
-      entryFields: terraEntryFields
+
+    window.removeAuraField = function(idx) {
+      auraFields.splice(idx, 1);
+      renderAuraFields();
     };
-    alert('Terra template saved!\n\n' + JSON.stringify(template, null, 2));
-    resetTerraCreator();
-  }
-  function resetTerraCreator() {
-    staticFields = [];
-    staticDropdownOptions = [];
-    terraEntryFields = [];
-    terraDropdownOptions = [];
-    document.getElementById('staticFieldsList').innerHTML = '';
-    document.getElementById('terraFieldsList').innerHTML = '';
-    document.getElementById('terra-preview').classList.add('hidden');
-    document.getElementById('terra-preview').innerHTML = '';
-    resetStaticDropdownOptions();
-    resetTerraDropdownOptions();
-    document.getElementById('newStaticFieldName').value = '';
-    document.getElementById('newStaticFieldType').value = 'text';
-    document.getElementById('terraNewFieldName').value = '';
-    document.getElementById('terraNewFieldType').value = 'text';
-  }
 
-  // Aura Diary Entry Fields Logic
-  function addField() {
-    const name = document.getElementById('newFieldName').value.trim();
-    const type = document.getElementById('newFieldType').value;
-    if (!name) return;
-    let field = {label: name, type};
-    if (type === 'dropdown') {
-      if (dropdownOptions.length === 0) {
-        alert('Please add at least one dropdown option.');
+    document.getElementById('add-aura-field').onclick = function() {
+      auraFields.push({ label: '', type: 'text' });
+      renderAuraFields();
+    };
+
+    // --- TERRA SECTIONS LOGIC ---
+    let terraSections = [];
+
+    function renderTerraSections() {
+      const list = document.getElementById('terra-sections-list');
+      list.innerHTML = '';
+      terraSections.forEach((s, sidx) => {
+        const card = document.createElement('div');
+        card.className = 'section-card';
+        card.innerHTML = `
+          <label>Section Name</label>
+          <input type="text" value="${s.name || ''}" onchange="terraSections[${sidx}].name = this.value">
+          <label>Section Type</label>
+          <input type="text" value="${s.type || ''}" onchange="terraSections[${sidx}].type = this.value">
+          <label>Undeletable</label>
+          <select onchange="terraSections[${sidx}].undeletable = (this.value === 'true')">
+            <option value="true" ${s.undeletable ? 'selected' : ''}>True</option>
+            <option value="false" ${!s.undeletable ? 'selected' : ''}>False</option>
+          </select>
+          <div class="fields-list" id="terra-fields-list-${sidx}"></div>
+          <button type="button" class="add-btn" onclick="addTerraField(${sidx})">+ Add Field</button>
+          <div class="section-actions">
+            <button type="button" class="delete-btn action-btn" onclick="removeTerraSection(${sidx})">Delete Section</button>
+          </div>
+        `;
+        list.appendChild(card);
+        renderTerraFields(sidx);
+      });
+    }
+
+    function renderTerraFields(sidx) {
+      const section = terraSections[sidx];
+      const list = document.getElementById(`terra-fields-list-${sidx}`);
+      list.innerHTML = '';
+      section.fields.forEach((f, fidx) => {
+        const div = document.createElement('div');
+        div.className = 'field-card';
+        div.innerHTML = `
+          <label>Field Name</label>
+          <input type="text" value="${f.name || ''}" onchange="terraSections[${sidx}].fields[${fidx}].name = this.value">
+          <label>Type</label>
+          <input type="text" value="${f.type || ''}" onchange="terraSections[${sidx}].fields[${fidx}].type = this.value">
+          <label>Static</label>
+          <select onchange="terraSections[${sidx}].fields[${fidx}].static = (this.value === 'true')">
+            <option value="true" ${f.static ? 'selected' : ''}>True</option>
+            <option value="false" ${!f.static ? 'selected' : ''}>False</option>
+          </select>
+          <label>Required</label>
+          <select onchange="terraSections[${sidx}].fields[${fidx}].required = (this.value === 'true')">
+            <option value="true" ${f.required ? 'selected' : ''}>True</option>
+            <option value="false" ${!f.required ? 'selected' : ''}>False</option>
+          </select>
+          <div class="field-actions">
+            <button type="button" class="delete-btn action-btn" onclick="removeTerraField(${sidx},${fidx})">Delete Field</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    window.addTerraField = function(sidx) {
+      terraSections[sidx].fields.push({ name: '', type: '', static: false, required: false });
+      renderTerraSections();
+    };
+
+    window.removeTerraField = function(sidx, fidx) {
+      terraSections[sidx].fields.splice(fidx, 1);
+      renderTerraSections();
+    };
+
+    window.removeTerraSection = function(sidx) {
+      terraSections.splice(sidx, 1);
+      renderTerraSections();
+    };
+
+    document.getElementById('add-terra-section').onclick = function() {
+      terraSections.push({ name: '', type: '', undeletable: false, fields: [] });
+      renderTerraSections();
+    };
+
+    // --- FORM SUBMISSION ---
+    document.getElementById('template-form').onsubmit = function(e) {
+      e.preventDefault();
+      document.getElementById('status').textContent = '';
+      const label = document.getElementById('template-label').value.trim();
+      const key = document.getElementById('template-key').value.trim();
+
+      if (!label || !key) {
+        document.getElementById('status').textContent = 'Label and Key are required.';
         return;
       }
-      field.options = [...dropdownOptions];
-    }
-    entryFields.push(field);
-    renderFields();
-    document.getElementById('newFieldName').value = '';
-    document.getElementById('newFieldType').value = 'text';
-    resetDropdownOptions();
-    document.getElementById('dropdownOptions').classList.add('hidden');
-  }
-  function removeField(idx) {
-    entryFields.splice(idx, 1);
-    renderFields();
-  }
-  function renderFields() {
-    const list = document.getElementById('fieldsList');
-    list.innerHTML = '';
-    entryFields.forEach((field, idx) => {
-      let extra = '';
-      if (field.type === 'dropdown' && field.options) {
-        extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
+
+      if (mode === 'aura') {
+        if (auraFields.length === 0) {
+          document.getElementById('status').textContent = 'Add at least one field for Aura template.';
+          return;
+        }
+        // Validate aura fields
+        for (let i = 0; i < auraFields.length; i++) {
+          const f = auraFields[i];
+          if (!f.label || !f.type) {
+            document.getElementById('status').textContent = `Aura field #${i+1} is incomplete.`;
+            return;
+          }
+          if (f.type === 'dropdown' && (!f.options || !Array.isArray(f.options) || f.options.length === 0)) {
+            document.getElementById('status').textContent = `Aura field #${i+1} must have dropdown options.`;
+            return;
+          }
+        }
+        // Build Aura template object
+        const links = document.getElementById('aura-links').value.split(',').map(x => x.trim()).filter(Boolean);
+        const template = {
+          type: 'aura',
+          label,
+          key,
+          fields: auraFields.map(f => ({
+            label: f.label,
+            type: f.type,
+            ...(f.type === 'dropdown' ? { options: f.options } : {})
+          })),
+          ...(links.length > 0 ? { links } : {})
+        };
+        // Here you can POST or save the template object
+        document.getElementById('status').textContent = 'Aura template generated! (Not yet saved)';
+        console.log('Aura Template:', template);
+      } else {
+        if (terraSections.length === 0) {
+          document.getElementById('status').textContent = 'Add at least one section for Terra template.';
+          return;
+        }
+        for (let s = 0; s < terraSections.length; s++) {
+          const sec = terraSections[s];
+          if (!sec.name || !sec.type || typeof sec.undeletable !== 'boolean') {
+            document.getElementById('status').textContent = `Terra section #${s+1} is incomplete.`;
+            return;
+          }
+          if (!Array.isArray(sec.fields) || sec.fields.length === 0) {
+            document.getElementById('status').textContent = `Terra section #${s+1} must have at least one field.`;
+            return;
+          }
+          for (let f = 0; f < sec.fields.length; f++) {
+            const fld = sec.fields[f];
+            if (!fld.name || !fld.type || typeof fld.static !== 'boolean' || typeof fld.required !== 'boolean') {
+              document.getElementById('status').textContent = `Field #${f+1} in section #${s+1} is incomplete.`;
+              return;
+            }
+          }
+        }
+        const version = document.getElementById('terra-version').value.trim();
+        if (!version) {
+          document.getElementById('status').textContent = 'Version is required for Terra template.';
+          return;
+        }
+        // Build Terra template object
+        const template = {
+          type: 'terra',
+          label,
+          key,
+          version,
+          sections: terraSections.map(sec => ({
+            name: sec.name,
+            type: sec.type,
+            undeletable: sec.undeletable,
+            fields: sec.fields.map(fld => ({
+              name: fld.name,
+              type: fld.type,
+              static: fld.static,
+              required: fld.required
+            }))
+          }))
+        };
+        // Here you can POST or save the template object
+        document.getElementById('status').textContent = 'Terra template generated! (Not yet saved)';
+        console.log('Terra Template:', template);
       }
-      list.innerHTML += `
-        <div>
-          <span style="font-weight:500;">${field.label}</span>
-          <span style="font-size:0.99em; color:#888;">[${field.type}]</span>${extra}
-          <button class="remove-field" onclick="removeField(${idx})">Remove</button>
-        </div>
-      `;
-    });
-  }
-  function onFieldTypeChange() {
-    const type = document.getElementById('newFieldType').value;
-    if (type === 'dropdown') {
-      document.getElementById('dropdownOptions').classList.remove('hidden');
-    } else {
-      document.getElementById('dropdownOptions').classList.add('hidden');
-      resetDropdownOptions();
-    }
-  }
-  function addDropdownOption() {
-    const input = document.querySelector('.optionInput');
-    const val = input.value.trim();
-    if (!val) return;
-    dropdownOptions.push(val);
-    renderDropdownOptions();
-    input.value = '';
-  }
-  function removeDropdownOption(idx) {
-    dropdownOptions.splice(idx, 1);
-    renderDropdownOptions();
-  }
-  function renderDropdownOptions() {
-    const optionsList = document.getElementById('optionsList');
-    optionsList.innerHTML = '';
-    dropdownOptions.forEach((opt, idx) => {
-      optionsList.innerHTML += `
-        <div>
-          <span>${opt}</span>
-          <button class="remove-option-btn" onclick="removeDropdownOption(${idx})">Remove</button>
-        </div>
-      `;
-    });
-  }
-  function resetDropdownOptions() {
-    dropdownOptions = [];
-    renderDropdownOptions();
-    document.querySelector('.optionInput').value = '';
-  }
-
-  // Preview and Save (Aura)
-  function previewAuraTemplate() {
-    const type = document.getElementById('tetherType').value.trim();
-    const desc = document.getElementById('tetherDesc').value.trim();
-    const preview = document.getElementById('aura-preview');
-    let html = `<div><b>Tether Type:</b> ${type || '<i>(none)</i>'}</div>`;
-    html += `<div><b>Description:</b> ${desc || '<i>(none)</i>'}</div>`;
-    // External Links
-    const linksList = document.getElementById('linksList').querySelectorAll('.link-row');
-    let links = [];
-    linksList.forEach(row => {
-      const label = row.querySelector('.linkLabel').value.trim();
-      const url = row.querySelector('.linkUrl').value.trim();
-      if (label && url) links.push({label, url});
-    });
-    if (links.length > 0) {
-      html += `<div style="margin-top:1em;"><b>Links:</b><ul>`;
-      links.forEach(link => {
-        html += `<li>${link.label}: <a href="${link.url}" target="_blank">${link.url}</a></li>`;
-      });
-      html += `</ul></div>`;
-    }
-    html += `<div style="margin-top:1em;"><b>User Diary Entry Fields:</b></div>`;
-    if (entryFields.length === 0) html += `<div><i>No entry fields added yet.</i></div>`;
-    else {
-      html += '<ul>';
-      entryFields.forEach(field => {
-        let extra = '';
-        if (field.type === 'dropdown' && field.options)
-          extra = ' <span style="color:#44c678;">(' + field.options.join(', ') + ')</span>';
-        html += `<li>${field.label} <span style="color:#888;">[${field.type}]</span>${extra}</li>`;
-      });
-      html += '</ul>';
-    }
-    preview.innerHTML = html;
-    preview.classList.remove('hidden');
-  }
-  function saveAuraTemplate() {
-    const type = document.getElementById('tetherType').value.trim();
-    const desc = document.getElementById('tetherDesc').value.trim();
-    let image = document.getElementById('tetherImage').files[0] || null;
-    // Gather links
-    const linksList = document.getElementById('linksList').querySelectorAll('.link-row');
-    let links = [];
-    linksList.forEach(row => {
-      const label = row.querySelector('.linkLabel').value.trim();
-      const url = row.querySelector('.linkUrl').value.trim();
-      if (label && url) links.push({label, url});
-    });
-    const template = {
-      tetherType: type,
-      description: desc,
-      image,
-      links,
-      entryFields
     };
-    alert('Aura template saved!\n\n' + JSON.stringify(template, null, 2));
-    resetAuraCreator();
-  }
-  function resetAuraCreator() {
-    entryFields = [];
-    dropdownOptions = [];
-    document.getElementById('fieldsList').innerHTML = '';
-    document.getElementById('aura-preview').classList.add('hidden');
-    document.getElementById('aura-preview').innerHTML = '';
-    resetLinks();
-    resetDropdownOptions();
-    document.getElementById('tetherType').value = '';
-    document.getElementById('tetherDesc').value = '';
-    document.getElementById('tetherImage').value = '';
-    document.getElementById('newFieldName').value = '';
-    document.getElementById('newFieldType').value = 'text';
-  }
 
-  // Init UI on load
-  showTerraCreator();
-  resetLinks();
-</script>
+    // --- Initialize ---
+    setMode('aura');
+    renderAuraFields();
+    renderTerraSections();
+  </script>
 </body>
 </html>
