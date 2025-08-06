@@ -4,77 +4,46 @@
   <meta charset="UTF-8">
   <title>Template Manager</title>
   <style>
+    /* Basic styles for layout and clarity */
     body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
     .container { max-width: 900px; margin: 2em auto; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px #ddd; padding: 2em; }
     h1 { margin-top: 0; }
-    .template-type-switch { display: flex; gap: 12px; margin-bottom: 2em; }
+    .type-switch { display: flex; gap: 1em; margin-bottom: 2em; }
     .type-btn {
-      border: none;
-      background: #eee;
-      color: #333;
-      padding: 0.6em 2em;
-      border-radius: 3px;
-      font-size: 1.1em;
-      cursor: pointer;
-      font-weight: bold;
+      border: none; background: #eee; color: #333;
+      padding: 0.6em 2em; border-radius: 3px;
+      font-size: 1.1em; cursor: pointer; font-weight: bold;
       transition: background .2s;
     }
     .type-btn.active { background: #44c678; color: #fff; }
+    .search-bar { margin-bottom: 1em; width: 100%; padding: 0.5em; font-size: 1.05em; }
+    .upload-section { margin-bottom: 2em; }
     .template-list { margin-bottom: 2em; }
-    .template-card {
-      padding: 1em;
-      background: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 4px;
-      margin-bottom: 1em;
-      box-shadow: 0 1px 2px #eee;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3em;
-    }
+    .template-card { padding: 1em; background: #fafafa; border: 1px solid #eee; border-radius: 4px; margin-bottom: 1em; }
     .template-label { font-weight: bold; font-size: 1.2em; }
     .template-key { font-size: 0.98em; color: #888; }
-    .template-actions { margin-top: 0.5em; display: flex; gap: 6px; }
+    .actions { margin-top: 0.5em; display: flex; gap: 8px; }
     .action-btn, .delete-btn {
-      background: #eee;
-      border: none;
-      padding: 0.3em 1.2em;
-      border-radius: 2px;
-      cursor: pointer;
-      transition: background .2s;
-      font-weight: bold;
+      background: #eee; border: none; padding: 0.3em 1.2em; border-radius: 2px;
+      cursor: pointer; transition: background .2s; font-weight: bold;
     }
     .action-btn:hover { background: #d2f0e0; }
     .delete-btn { background: #e44; color: #fff; }
     .delete-btn:hover { background: #b22; }
-    .search-bar { margin-bottom: 1em; width: 100%; padding: 0.5em; font-size: 1.05em; }
-    .upload-section { margin-bottom: 2em; }
-    .upload-status { color: #c44; font-size: 0.98em; margin-top: 0.3em; }
-    .back-btn {
-      display: inline-block;
-      margin-bottom: 1.4em;
-      padding: 0.6em 2em;
-      background: #eee;
-      color: #333;
-      border: none;
-      border-radius: 4px;
-      font-size: 1.08em;
-      font-weight: bold;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background .2s;
-    }
+    .status { color: #c44; font-size: 0.98em; margin-top: 0.3em; }
+    .back-btn { display: inline-block; margin-bottom: 1.4em; padding: 0.6em 2em; background: #eee; color: #333;
+      border: none; border-radius: 4px; font-size: 1.08em; font-weight: bold; text-decoration: none; cursor: pointer; transition: background .2s;}
     .back-btn:hover { background: #44c678; color: #fff; }
   </style>
-  <!-- Firebase scripts -->
+  <!-- Firebase scripts (compat version for simplicity, can be upgraded later) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="container">
-    <a href="/admin" class="back-btn" id="back-to-admin">← Back to Admin</a>
+    <a href="/admin" class="back-btn">← Back to Admin</a>
     <h1>Template Manager</h1>
-    <div class="template-type-switch">
+    <div class="type-switch">
       <button id="terra-btn" class="type-btn active">Terra</button>
       <button id="aura-btn" class="type-btn">Aura</button>
     </div>
@@ -82,135 +51,94 @@
     <div class="upload-section">
       <input type="file" id="upload-input" accept=".json">
       <button id="upload-btn" class="action-btn">Bulk Upload</button>
-      <span id="upload-status" class="upload-status"></span>
+      <span id="status" class="status"></span>
     </div>
     <div id="template-list" class="template-list"></div>
   </div>
   <script>
-    // === 1. Initialize Firebase ===
-    // TODO: Fill in your own Firebase config here
+    // === 1. Firebase Initialization ===
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      // ...add the rest of your config
+      projectId: "YOUR_PROJECT_ID"
+      // ... other config
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let terraTemplates = [];
-    let auraTemplates = [];
+    // === 2. Basic State & Utilities ===
+    let templates = { terra: [], aura: [] };
     let activeType = "terra";
     let renameMode = {};
-    let fetchError = "";
 
-    // --- Fetch Templates from Firestore ---
+    // === 3. Fetch Templates ===
     async function fetchTemplates(type) {
-      fetchError = "";
       try {
-        const querySnapshot = await db.collection('templates').where('type', '==', type).get();
-        const data = [];
-        querySnapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
-        if (type === "terra") {
-          terraTemplates = data;
-        } else {
-          auraTemplates = data;
-        }
+        const snap = await db.collection('templates').where('type', '==', type).get();
+        templates[type] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (e) {
-        fetchError = `Error fetching ${type} templates: ${e.message}`;
-        if (type === "terra") terraTemplates = [];
-        else auraTemplates = [];
+        templates[type] = [];
+        document.getElementById("status").textContent = `Error: ${e.message}`;
       }
       renderTemplates();
     }
 
-    async function reloadTemplates() {
-      await fetchTemplates(activeType);
-    }
-
-    // --- UI Switch Logic ---
-    document.getElementById("terra-btn").onclick = async function() {
-      setActiveType("terra");
-      await fetchTemplates("terra");
-    };
-    document.getElementById("aura-btn").onclick = async function() {
-      setActiveType("aura");
-      await fetchTemplates("aura");
-    };
-
-    function setActiveType(type) {
-      activeType = type;
-      document.getElementById("terra-btn").classList.toggle("active", type === "terra");
-      document.getElementById("aura-btn").classList.toggle("active", type === "aura");
-      document.getElementById("upload-status").textContent = "";
-      renderTemplates();
-    }
-
-    // --- Search Logic ---
-    document.getElementById("search-bar").oninput = renderTemplates;
-
-    // --- Template Render Logic ---
+    // === 4. Render Template List ===
     function renderTemplates() {
       const search = document.getElementById("search-bar").value.trim().toLowerCase();
-      let templates = activeType === "terra" ? terraTemplates : auraTemplates;
-      let list = document.getElementById("template-list");
+      const list = document.getElementById("template-list");
       list.innerHTML = "";
-      if (fetchError) {
-        list.innerHTML = `<div style="color:#c44;font-weight:bold;">${fetchError}</div>`;
-        return;
-      }
-      if (templates.length === 0) {
+      const filtered = templates[activeType].filter(t =>
+        (!search) ||
+        (t.label && t.label.toLowerCase().includes(search)) ||
+        (t.key && t.key.toLowerCase().includes(search))
+      );
+      if (filtered.length === 0) {
         list.innerHTML = `<div style="color:#888;font-style:italic;">No templates found.</div>`;
         return;
       }
-      templates.filter(t => {
-        if (!search) return true;
-        return (t.label && t.label.toLowerCase().includes(search)) ||
-               (t.key && t.key.toLowerCase().includes(search));
-      }).forEach(t => {
+      filtered.forEach(t => {
         let card = document.createElement("div");
         card.className = "template-card";
         if (renameMode[t.id]) {
-          // Rename UI
           card.innerHTML = `
             <span class="template-label">${t.label}</span>
             <div class="template-key">${t.key}</div>
-            <input type="text" id="rename-input-${t.id}" value="${t.label}" style="font-size:1.05em; margin-top:8px;">
-            <div class="template-actions">
-              <button class="action-btn" id="rename-save-btn-${t.id}">Save</button>
-              <button class="action-btn" id="rename-cancel-btn-${t.id}">Cancel</button>
+            <input type="text" id="ren-input-${t.id}" value="${t.label}" style="margin-top:8px;">
+            <div class="actions">
+              <button class="action-btn" id="save-${t.id}">Save</button>
+              <button class="action-btn" id="cancel-${t.id}">Cancel</button>
             </div>
           `;
-          card.querySelector(`#rename-save-btn-${t.id}`).onclick = async function() {
-            const val = card.querySelector(`#rename-input-${t.id}`).value.trim();
+          card.querySelector(`#save-${t.id}`).onclick = async function() {
+            const val = card.querySelector(`#ren-input-${t.id}`).value.trim();
             if (val && val !== t.label) {
-              await updateTemplateLabel(t.id, val);
+              await db.collection('templates').doc(t.id).update({ label: val });
             }
             renameMode[t.id] = false;
-            await reloadTemplates();
+            await fetchTemplates(activeType);
           };
-          card.querySelector(`#rename-cancel-btn-${t.id}`).onclick = function() {
+          card.querySelector(`#cancel-${t.id}`).onclick = function() {
             renameMode[t.id] = false;
             renderTemplates();
           };
         } else {
-          // Normal UI
           card.innerHTML = `
             <span class="template-label">${t.label}</span>
             <div class="template-key">${t.key}</div>
-            <div class="template-actions">
-              <button class="action-btn" id="rename-btn-${t.id}">Rename</button>
-              <button class="delete-btn action-btn" id="delete-btn-${t.id}">Delete</button>
+            <div class="actions">
+              <button class="action-btn" id="rename-${t.id}">Rename</button>
+              <button class="delete-btn action-btn" id="delete-${t.id}">Delete</button>
             </div>
           `;
-          card.querySelector(`#rename-btn-${t.id}`).onclick = function() {
+          card.querySelector(`#rename-${t.id}`).onclick = function() {
             renameMode[t.id] = true;
             renderTemplates();
           };
-          card.querySelector(`#delete-btn-${t.id}`).onclick = async function() {
-            if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
-              await deleteTemplate(t.id);
-              await reloadTemplates();
+          card.querySelector(`#delete-${t.id}`).onclick = async function() {
+            if (confirm(`Delete template "${t.label}"?`)) {
+              await db.collection('templates').doc(t.id).delete();
+              await fetchTemplates(activeType);
             }
           };
         }
@@ -218,75 +146,50 @@
       });
     }
 
-    // --- Bulk Upload Logic ---
+    // === 5. Hook Up Controls ===
+    document.getElementById("terra-btn").onclick = async function() {
+      activeType = "terra";
+      document.getElementById("terra-btn").classList.add("active");
+      document.getElementById("aura-btn").classList.remove("active");
+      await fetchTemplates("terra");
+    };
+    document.getElementById("aura-btn").onclick = async function() {
+      activeType = "aura";
+      document.getElementById("aura-btn").classList.add("active");
+      document.getElementById("terra-btn").classList.remove("active");
+      await fetchTemplates("aura");
+    };
+    document.getElementById("search-bar").oninput = renderTemplates;
+
+    // === 6. Bulk Upload Logic (Validates Structure) ===
     document.getElementById("upload-btn").onclick = async function() {
       const input = document.getElementById("upload-input");
-      document.getElementById("upload-status").textContent = "";
+      document.getElementById("status").textContent = "";
       if (!input.files[0]) {
-        document.getElementById("upload-status").textContent = "Please select a .json file to upload.";
+        document.getElementById("status").textContent = "Select a .json file.";
         return;
       }
-      const file = input.files[0];
       const reader = new FileReader();
       reader.onload = async function(e) {
         let data;
-        try {
-          data = JSON.parse(e.target.result);
-        } catch (err) {
-          document.getElementById("upload-status").textContent = `Error parsing JSON: ${err.message}`;
+        try { data = JSON.parse(e.target.result); }
+        catch (err) {
+          document.getElementById("status").textContent = `JSON error: ${err.message}`;
           return;
         }
         let toImport = Array.isArray(data) ? data : [data];
-        let errors = [];
-        let imported = [];
+        let errors = [], imported = [];
         toImport.forEach((tpl, idx) => {
           if (activeType === "terra") {
-            // Validate Terra template
-            if (!tpl || typeof tpl !== "object" ||
-                !tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
-              errors.push(`Template #${idx+1}: Invalid template structure.`);
-              return;
-            }
-            let validSections = true;
-            for (const sec of tpl.sections) {
-              if (!sec.name || !sec.type || typeof sec.undeletable !== "boolean" || !Array.isArray(sec.fields)) {
-                validSections = false; break;
-              }
-              for (const f of sec.fields) {
-                if (!f.name || !f.type || typeof f.static !== "boolean" || typeof f.required !== "boolean") {
-                  validSections = false; break;
-                }
-              }
-            }
-            if (!validSections) {
-              errors.push(`Template #${idx+1}: Invalid sections or fields structure.`);
+            if (!tpl || typeof tpl !== "object" || !tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
+              errors.push(`Template #${idx+1}: Invalid Terra structure.`);
               return;
             }
             tpl.type = "terra";
             imported.push(tpl);
           } else {
-            // Validate Aura template
             if (!tpl || typeof tpl !== "object" || !tpl.key || !tpl.label || !Array.isArray(tpl.fields)) {
-              errors.push(`Template #${idx+1}: Invalid Aura template structure.`);
-              return;
-            }
-            let validFields = true;
-            for (const f of tpl.fields) {
-              if (!f.label || !f.type) {
-                validFields = false;
-                break;
-              }
-              if (f.type === "dropdown" && (!Array.isArray(f.options) || f.options.length === 0)) {
-                validFields = false;
-                break;
-              }
-            }
-            if (!validFields) {
-              errors.push(`Template #${idx+1}: Invalid fields structure.`);
-              return;
-            }
-            if (tpl.links && !Array.isArray(tpl.links)) {
-              errors.push(`Template #${idx+1}: Links must be an array.`);
+              errors.push(`Template #${idx+1}: Invalid Aura structure.`);
               return;
             }
             tpl.type = "aura";
@@ -294,44 +197,26 @@
           }
         });
         if (errors.length) {
-          document.getElementById("upload-status").textContent = errors.join(" | ");
+          document.getElementById("status").textContent = errors.join(" | ");
           return;
         }
         try {
-          // Batch write
           const batch = db.batch();
           imported.forEach(tpl => {
             const ref = db.collection('templates').doc();
             batch.set(ref, tpl);
           });
           await batch.commit();
-          document.getElementById("upload-status").textContent = "Templates imported successfully!";
-          await reloadTemplates();
+          document.getElementById("status").textContent = "Templates imported!";
+          await fetchTemplates(activeType);
         } catch (err) {
-          document.getElementById("upload-status").textContent = "Failed to upload templates: " + err.message;
+          document.getElementById("status").textContent = "Upload failed: " + err.message;
         }
       };
-      reader.readAsText(file);
+      reader.readAsText(input.files[0]);
     };
 
-    // --- Template Update/Delete ---
-    async function updateTemplateLabel(id, newLabel) {
-      try {
-        await db.collection('templates').doc(id).update({ label: newLabel });
-      } catch (e) {
-        alert("Failed to rename: " + e.message);
-      }
-    }
-
-    async function deleteTemplate(id) {
-      try {
-        await db.collection('templates').doc(id).delete();
-      } catch (e) {
-        alert("Failed to delete: " + e.message);
-      }
-    }
-
-    // --- Initial Load ---
+    // === 7. Initial Load ===
     window.onload = async function() {
       await fetchTemplates("terra");
     };
