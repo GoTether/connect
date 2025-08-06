@@ -66,6 +66,9 @@
     }
     .back-btn:hover { background: #44c678; color: #fff; }
   </style>
+  <!-- Firebase scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="container">
@@ -84,26 +87,35 @@
     <div id="template-list" class="template-list"></div>
   </div>
   <script>
+    // === 1. Initialize Firebase ===
+    // TODO: Fill in your own Firebase config here
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      // ...add the rest of your config
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     let terraTemplates = [];
     let auraTemplates = [];
     let activeType = "terra";
     let renameMode = {};
     let fetchError = "";
 
-    // --- Fetch Templates from Backend ---
+    // --- Fetch Templates from Firestore ---
     async function fetchTemplates(type) {
-      // You can change these endpoints as needed
-      const url = type === "terra" ? "/api/terra-templates" : "/api/aura-templates";
+      fetchError = "";
       try {
-        const res = await fetch(url, { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data = await res.json();
+        const querySnapshot = await db.collection('templates').where('type', '==', type).get();
+        const data = [];
+        querySnapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
         if (type === "terra") {
           terraTemplates = data;
         } else {
           auraTemplates = data;
         }
-        fetchError = "";
       } catch (e) {
         fetchError = `Error fetching ${type} templates: ${e.message}`;
         if (type === "terra") terraTemplates = [];
@@ -158,27 +170,27 @@
       }).forEach(t => {
         let card = document.createElement("div");
         card.className = "template-card";
-        if (renameMode[t.key]) {
+        if (renameMode[t.id]) {
           // Rename UI
           card.innerHTML = `
             <span class="template-label">${t.label}</span>
             <div class="template-key">${t.key}</div>
-            <input type="text" id="rename-input-${t.key}" value="${t.label}" style="font-size:1.05em; margin-top:8px;">
+            <input type="text" id="rename-input-${t.id}" value="${t.label}" style="font-size:1.05em; margin-top:8px;">
             <div class="template-actions">
-              <button class="action-btn" id="rename-save-btn-${t.key}">Save</button>
-              <button class="action-btn" id="rename-cancel-btn-${t.key}">Cancel</button>
+              <button class="action-btn" id="rename-save-btn-${t.id}">Save</button>
+              <button class="action-btn" id="rename-cancel-btn-${t.id}">Cancel</button>
             </div>
           `;
-          card.querySelector(`#rename-save-btn-${t.key}`).onclick = async function() {
-            const val = card.querySelector(`#rename-input-${t.key}`).value.trim();
+          card.querySelector(`#rename-save-btn-${t.id}`).onclick = async function() {
+            const val = card.querySelector(`#rename-input-${t.id}`).value.trim();
             if (val && val !== t.label) {
-              await updateTemplateLabel(t.key, val);
+              await updateTemplateLabel(t.id, val);
             }
-            renameMode[t.key] = false;
+            renameMode[t.id] = false;
             await reloadTemplates();
           };
-          card.querySelector(`#rename-cancel-btn-${t.key}`).onclick = function() {
-            renameMode[t.key] = false;
+          card.querySelector(`#rename-cancel-btn-${t.id}`).onclick = function() {
+            renameMode[t.id] = false;
             renderTemplates();
           };
         } else {
@@ -187,17 +199,17 @@
             <span class="template-label">${t.label}</span>
             <div class="template-key">${t.key}</div>
             <div class="template-actions">
-              <button class="action-btn" id="rename-btn-${t.key}">Rename</button>
-              <button class="delete-btn action-btn" id="delete-btn-${t.key}">Delete</button>
+              <button class="action-btn" id="rename-btn-${t.id}">Rename</button>
+              <button class="delete-btn action-btn" id="delete-btn-${t.id}">Delete</button>
             </div>
           `;
-          card.querySelector(`#rename-btn-${t.key}`).onclick = function() {
-            renameMode[t.key] = true;
+          card.querySelector(`#rename-btn-${t.id}`).onclick = function() {
+            renameMode[t.id] = true;
             renderTemplates();
           };
-          card.querySelector(`#delete-btn-${t.key}`).onclick = async function() {
+          card.querySelector(`#delete-btn-${t.id}`).onclick = async function() {
             if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
-              await deleteTemplate(t.key);
+              await deleteTemplate(t.id);
               await reloadTemplates();
             }
           };
@@ -250,6 +262,7 @@
               errors.push(`Template #${idx+1}: Invalid sections or fields structure.`);
               return;
             }
+            tpl.type = "terra";
             imported.push(tpl);
           } else {
             // Validate Aura template
@@ -276,6 +289,7 @@
               errors.push(`Template #${idx+1}: Links must be an array.`);
               return;
             }
+            tpl.type = "aura";
             imported.push(tpl);
           }
         });
@@ -283,15 +297,14 @@
           document.getElementById("upload-status").textContent = errors.join(" | ");
           return;
         }
-        // Send to backend
         try {
-          const postUrl = activeType === "terra" ? "/api/terra-templates" : "/api/aura-templates";
-          await fetch(postUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify(imported)
+          // Batch write
+          const batch = db.batch();
+          imported.forEach(tpl => {
+            const ref = db.collection('templates').doc();
+            batch.set(ref, tpl);
           });
+          await batch.commit();
           document.getElementById("upload-status").textContent = "Templates imported successfully!";
           await reloadTemplates();
         } catch (err) {
@@ -301,32 +314,18 @@
       reader.readAsText(file);
     };
 
-    // --- Template Update/Delete API ---
-    async function updateTemplateLabel(key, newLabel) {
-      const url = activeType === "terra"
-        ? `/api/terra-templates/${encodeURIComponent(key)}`
-        : `/api/aura-templates/${encodeURIComponent(key)}`;
+    // --- Template Update/Delete ---
+    async function updateTemplateLabel(id, newLabel) {
       try {
-        await fetch(url, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ label: newLabel })
-        });
+        await db.collection('templates').doc(id).update({ label: newLabel });
       } catch (e) {
         alert("Failed to rename: " + e.message);
       }
     }
 
-    async function deleteTemplate(key) {
-      const url = activeType === "terra"
-        ? `/api/terra-templates/${encodeURIComponent(key)}`
-        : `/api/aura-templates/${encodeURIComponent(key)}`;
+    async function deleteTemplate(id) {
       try {
-        await fetch(url, {
-          method: "DELETE",
-          credentials: "same-origin"
-        });
+        await db.collection('templates').doc(id).delete();
       } catch (e) {
         alert("Failed to delete: " + e.message);
       }
