@@ -84,45 +84,46 @@
     <div id="template-list" class="template-list"></div>
   </div>
   <script>
-    // --- Template Data Stores ---
     let terraTemplates = [];
     let auraTemplates = [];
     let activeType = "terra";
-    let renameMode = {}; // Track which template is in rename mode
+    let renameMode = {};
+    let fetchError = "";
 
-    // --- Load Existing Templates on Page Load ---
-    function loadTemplatesFromStorage() {
-      // Try to load Terra templates
-      const terra = localStorage.getItem("terraTemplates");
-      if (terra) {
-        try {
-          terraTemplates = JSON.parse(terra);
-        } catch (e) {
-          terraTemplates = [];
+    // --- Fetch Templates from Backend ---
+    async function fetchTemplates(type) {
+      // You can change these endpoints as needed
+      const url = type === "terra" ? "/api/terra-templates" : "/api/aura-templates";
+      try {
+        const res = await fetch(url, { credentials: "same-origin" });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const data = await res.json();
+        if (type === "terra") {
+          terraTemplates = data;
+        } else {
+          auraTemplates = data;
         }
+        fetchError = "";
+      } catch (e) {
+        fetchError = `Error fetching ${type} templates: ${e.message}`;
+        if (type === "terra") terraTemplates = [];
+        else auraTemplates = [];
       }
-      // Try to load Aura templates
-      const aura = localStorage.getItem("auraTemplates");
-      if (aura) {
-        try {
-          auraTemplates = JSON.parse(aura);
-        } catch (e) {
-          auraTemplates = [];
-        }
-      }
+      renderTemplates();
     }
 
-    function saveTemplatesToStorage() {
-      localStorage.setItem("terraTemplates", JSON.stringify(terraTemplates));
-      localStorage.setItem("auraTemplates", JSON.stringify(auraTemplates));
+    async function reloadTemplates() {
+      await fetchTemplates(activeType);
     }
 
     // --- UI Switch Logic ---
-    document.getElementById("terra-btn").onclick = function() {
+    document.getElementById("terra-btn").onclick = async function() {
       setActiveType("terra");
+      await fetchTemplates("terra");
     };
-    document.getElementById("aura-btn").onclick = function() {
+    document.getElementById("aura-btn").onclick = async function() {
       setActiveType("aura");
+      await fetchTemplates("aura");
     };
 
     function setActiveType(type) {
@@ -142,6 +143,14 @@
       let templates = activeType === "terra" ? terraTemplates : auraTemplates;
       let list = document.getElementById("template-list");
       list.innerHTML = "";
+      if (fetchError) {
+        list.innerHTML = `<div style="color:#c44;font-weight:bold;">${fetchError}</div>`;
+        return;
+      }
+      if (templates.length === 0) {
+        list.innerHTML = `<div style="color:#888;font-style:italic;">No templates found.</div>`;
+        return;
+      }
       templates.filter(t => {
         if (!search) return true;
         return (t.label && t.label.toLowerCase().includes(search)) ||
@@ -160,12 +169,13 @@
               <button class="action-btn" id="rename-cancel-btn-${t.key}">Cancel</button>
             </div>
           `;
-          card.querySelector(`#rename-save-btn-${t.key}`).onclick = function() {
+          card.querySelector(`#rename-save-btn-${t.key}`).onclick = async function() {
             const val = card.querySelector(`#rename-input-${t.key}`).value.trim();
-            if (val) { t.label = val; }
+            if (val && val !== t.label) {
+              await updateTemplateLabel(t.key, val);
+            }
             renameMode[t.key] = false;
-            saveTemplatesToStorage();
-            renderTemplates();
+            await reloadTemplates();
           };
           card.querySelector(`#rename-cancel-btn-${t.key}`).onclick = function() {
             renameMode[t.key] = false;
@@ -185,15 +195,10 @@
             renameMode[t.key] = true;
             renderTemplates();
           };
-          card.querySelector(`#delete-btn-${t.key}`).onclick = function() {
+          card.querySelector(`#delete-btn-${t.key}`).onclick = async function() {
             if (confirm(`Delete template "${t.label}" (${t.key})? This cannot be undone.`)) {
-              if (activeType === "terra") {
-                terraTemplates = terraTemplates.filter(x => x.key !== t.key);
-              } else {
-                auraTemplates = auraTemplates.filter(x => x.key !== t.key);
-              }
-              saveTemplatesToStorage();
-              renderTemplates();
+              await deleteTemplate(t.key);
+              await reloadTemplates();
             }
           };
         }
@@ -202,7 +207,7 @@
     }
 
     // --- Bulk Upload Logic ---
-    document.getElementById("upload-btn").onclick = function() {
+    document.getElementById("upload-btn").onclick = async function() {
       const input = document.getElementById("upload-input");
       document.getElementById("upload-status").textContent = "";
       if (!input.files[0]) {
@@ -211,7 +216,7 @@
       }
       const file = input.files[0];
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         let data;
         try {
           data = JSON.parse(e.target.result);
@@ -278,21 +283,59 @@
           document.getElementById("upload-status").textContent = errors.join(" | ");
           return;
         }
-        if (activeType === "terra") {
-          terraTemplates = terraTemplates.concat(imported);
-        } else {
-          auraTemplates = auraTemplates.concat(imported);
+        // Send to backend
+        try {
+          const postUrl = activeType === "terra" ? "/api/terra-templates" : "/api/aura-templates";
+          await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify(imported)
+          });
+          document.getElementById("upload-status").textContent = "Templates imported successfully!";
+          await reloadTemplates();
+        } catch (err) {
+          document.getElementById("upload-status").textContent = "Failed to upload templates: " + err.message;
         }
-        saveTemplatesToStorage();
-        renderTemplates();
-        document.getElementById("upload-status").textContent = "Templates imported successfully!";
       };
       reader.readAsText(file);
     };
 
+    // --- Template Update/Delete API ---
+    async function updateTemplateLabel(key, newLabel) {
+      const url = activeType === "terra"
+        ? `/api/terra-templates/${encodeURIComponent(key)}`
+        : `/api/aura-templates/${encodeURIComponent(key)}`;
+      try {
+        await fetch(url, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ label: newLabel })
+        });
+      } catch (e) {
+        alert("Failed to rename: " + e.message);
+      }
+    }
+
+    async function deleteTemplate(key) {
+      const url = activeType === "terra"
+        ? `/api/terra-templates/${encodeURIComponent(key)}`
+        : `/api/aura-templates/${encodeURIComponent(key)}`;
+      try {
+        await fetch(url, {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+      } catch (e) {
+        alert("Failed to delete: " + e.message);
+      }
+    }
+
     // --- Initial Load ---
-    loadTemplatesFromStorage();
-    renderTemplates();
+    window.onload = async function() {
+      await fetchTemplates("terra");
+    };
   </script>
 </body>
 </html>
