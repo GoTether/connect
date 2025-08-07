@@ -143,10 +143,14 @@ function submitEntry(id) {
     entry._lng = pos.coords.longitude;
     db.ref("shared_logs/" + id + "/entries").push(entry).then(() => {
       showModal("Entry saved successfully.");
+      document.querySelectorAll('#entryForm [data-name]').forEach(f => f.value = '');
+      displayLogEntries(id);
     });
   }, () => {
     db.ref("shared_logs/" + id + "/entries").push(entry).then(() => {
       showModal("Entry saved (location permission denied).");
+      document.querySelectorAll('#entryForm [data-name]').forEach(f => f.value = '');
+      displayLogEntries(id);
     });
   });
 }
@@ -162,4 +166,27 @@ function resetTether(id) {
 
 function renderAuraPlaceholder() {
   appDiv.innerHTML = `<h2 class="text-2xl font-semibold text-yellow-400">Aura Tether support coming soon</h2>`;
+}
+
+function displayLogEntries(id) {
+  db.ref("shared_logs/" + id + "/entries").once("value").then(snapshot => {
+    const logs = snapshot.val();
+    if (!logs) return;
+    const entries = Object.values(logs).reverse(); // newest first
+    const logHtml = entries.map(entry => {
+      let meta = `<div class='text-xs text-gray-400'>${new Date(entry._timestamp).toLocaleString()}`;
+      if (entry._lat && entry._lng) {
+        meta += ` — 📍 ${entry._lat.toFixed(4)}, ${entry._lng.toFixed(4)}`;
+      }
+      meta += "</div>";
+      const content = Object.entries(entry)
+        .filter(([k]) => !k.startsWith("_"))
+        .map(([k, v]) => `<div><strong>${k}:</strong> ${v}</div>`)
+        .join("");
+      return `<div class="p-4 rounded-lg bg-slate-700 shadow mt-4">${content}${meta}</div>`;
+    }).join("");
+    const container = document.createElement("div");
+    container.innerHTML = `<h3 class="text-lg font-semibold mt-10 mb-2">Previous Entries</h3>${logHtml}`;
+    appDiv.appendChild(container);
+  });
 }
