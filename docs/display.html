@@ -31,7 +31,7 @@
     <div id="entries"></div>
   </div>
 
-  <!-- Timestamp label -->
+  <!-- Timestamp -->
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
@@ -52,20 +52,20 @@
     const db = firebase.database();
     const auth = firebase.auth();
 
-    const statusText = document.getElementById('status-text');
+    const params = new URLSearchParams(window.location.search);
+    const tetherId = params.get('id');
+    const statusEl = document.getElementById('status-text');
     const staticContainer = document.getElementById('static-fields');
     const logForm = document.getElementById('log-form');
     const entriesContainer = document.getElementById('entries');
 
-    const params = new URLSearchParams(window.location.search);
-    const tetherId = params.get('id');
     let uid = null;
     let template = null;
     let logPath = null;
     let staticPath = null;
 
     if (!tetherId) {
-      statusText.innerText = "No Tether ID in URL.";
+      statusEl.innerText = "No Tether ID in URL.";
     }
 
     auth.onAuthStateChanged(async user => {
@@ -76,24 +76,24 @@
 
     async function loadTether() {
       const tetherSnap = await db.ref(`tethers/${tetherId}`).get();
-      if (!tetherSnap.exists()) return statusText.innerText = "Tether not found.";
+      if (!tetherSnap.exists()) return statusEl.innerText = "Tether not found.";
       const tether = tetherSnap.val();
       staticPath = `tethers/${tetherId}/static`;
 
       const templateSnap = await db.ref(`global_templates/${tether.template_id}`).get();
-      if (!templateSnap.exists()) return statusText.innerText = "Template not found.";
+      if (!templateSnap.exists()) return statusEl.innerText = "Template not found.";
       template = templateSnap.val();
 
       logPath = template.log_scope === "terra"
         ? `shared_logs/${tetherId}/entries`
         : `users/${uid}/logs/${tether.template_id}/entries`;
 
-      renderStaticSection();
+      renderStaticFields();
       renderLogForm();
       renderEntries();
     }
 
-    async function renderStaticSection() {
+    async function renderStaticFields() {
       const snap = await db.ref(staticPath).get();
       const values = snap.exists() ? snap.val() : {};
 
