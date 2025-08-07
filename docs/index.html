@@ -1,211 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Tether Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref as dbRef, get, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+if (!snapshot.exists()) {
+  // Fetch templates from Firebase
+  const templatesSnap = await get(dbRef(db, `global_templates`));
+  if (!templatesSnap.exists()) {
+    setMainContent(`
+      <div class="text-red-600 text-center p-8">No templates are available. Please contact the administrator.</div>
+    `);
+    return;
+  }
+  const templates = templatesSnap.val();
+  const templateOptions = Object.entries(templates).map(
+    ([tid, tpl]) =>
+      `<option value="${tid}" data-scope="${tpl.scope || tpl.type || ''}">${tpl.label || tid} (${tpl.scope || tpl.type || ''})</option>`
+  ).join('');
 
-    // Firebase config - replace with your project config if needed
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
+  setMainContent(`
+    <div class="flex flex-col items-center justify-center min-h-[60vh]">
+      <h2 class="text-xl font-bold mb-2 text-gray-900">Assign Template to New Tether</h2>
+      <p class="mb-4 text-gray-600">No tether found with ID: <span class="font-mono">${id}</span></p>
+      <form id="assign-template-form" class="bg-gray-50 rounded-lg p-6 shadow max-w-md w-full">
+        <label class="block mb-2 font-semibold">Select a Template</label>
+        <select name="template" class="w-full mb-4 px-3 py-2 border rounded" required>
+          <option value="">-- Select Template --</option>
+          ${templateOptions}
+        </select>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold">Assign Template</button>
+      </form>
+    </div>
+  `);
+  clearStatus();
+
+  document.getElementById('assign-template-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const templateId = form.template.value;
+    const selectedOption = form.template.selectedOptions[0];
+    const scope = selectedOption.getAttribute('data-scope') || 'terra';
+    // Create new tether in database
+    const newTether = {
+      type: scope,
+      template: templateId,
+      assigned: false
     };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    // Helpers
-    function getQueryParam(param) {
-      const url = new URL(window.location.href);
-      return url.searchParams.get(param);
-    }
-    function setMainContent(html) {
-      document.getElementById('main-content').innerHTML = html;
-    }
-    function showStatus(msg, type='info') {
-      const status = document.getElementById('status');
-      status.textContent = msg;
-      status.className = type === 'error'
-        ? 'text-red-600 mb-4'
-        : 'text-green-600 mb-4';
-    }
-    function clearStatus() {
-      document.getElementById('status').textContent = '';
-    }
-
-    // Entry point
-    window.addEventListener('DOMContentLoaded', async () => {
-      // Always show admin button in footer
-
-      // Routing logic
-      const id = getQueryParam('id');
-      if (!id) {
-        showSplash();
-      } else {
-        showTether(id);
-      }
-    });
-
-    // Splash Page
-    function showSplash() {
-      setMainContent(`
-        <div class="flex flex-col items-center justify-center min-h-[60vh]">
-          <img src="logo.png" alt="Tether Logo" class="w-24 mb-6" onerror="this.style.display='none'"/>
-          <h1 class="text-3xl font-bold mb-4 text-gray-900">Welcome to Tether Connect</h1>
-          <p class="mb-6 text-gray-700 text-lg text-center max-w-xl">
-            Scan a Tether QR code or enter a Tether link to get started.<br>
-            <span class="block mt-2 text-sm text-gray-500">
-              When you scan or enter a Tether ID, you'll be able to view, claim, or interact with that Tether.
-            </span>
-          </p>
-          <form id="tether-manual-form" class="flex gap-2 w-full max-w-md mb-4">
-            <input id="tether-id-input" type="text" required placeholder="Enter Tether ID..." class="flex-1 px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-blue-500"/>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold transition">Go</button>
-          </form>
-          <div class="text-gray-400 text-xs mt-8">Powered by GoTether</div>
-        </div>
-      `);
-      clearStatus();
-      document.getElementById('tether-manual-form').onsubmit = (e) => {
-        e.preventDefault();
-        const enteredId = document.getElementById('tether-id-input').value.trim();
-        if (enteredId) {
-          window.history.pushState({}, '', `?id=${encodeURIComponent(enteredId)}`);
-          showTether(enteredId);
-        }
-      };
-    }
-
-    // Main Display Page, dynamic for Terra/Aura/assigned/unassigned
-    async function showTether(id) {
-      setMainContent(`
-        <div class="flex flex-col items-center justify-center min-h-[60vh]">
-          <div class="mb-6">
-            <svg class="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-            <span class="ml-2 text-blue-600 font-medium">Loading tether info...</span>
-          </div>
-        </div>
-      `);
-      clearStatus();
-
-      // Look up the id in Firebase
-      let snapshot;
-      try {
-        snapshot = await get(dbRef(db, `tethers/${id}`));
-      } catch (err) {
-        showStatus("Error connecting to database.", "error");
-        showSplash();
-        return;
-      }
-
-      if (!snapshot.exists()) {
-        setMainContent(`
-          <div class="flex flex-col items-center justify-center min-h-[60vh]">
-            <h2 class="text-xl font-bold mb-2 text-gray-900">Tether Not Found</h2>
-            <p class="mb-4 text-gray-600">No Tether found with ID: <span class="font-mono">${id}</span></p>
-            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold" onclick="window.history.pushState({}, '', '/'); window.location.reload();">Back to Home</button>
-          </div>
-        `);
-        return;
-      }
-
-      const tether = snapshot.val();
-      // Determine type & assigned status
-      const type = tether.type || (tether.scope || '').toLowerCase(); // 'terra' or 'aura'
-      const assigned = !!tether.assigned; // true if assigned, else false
-
-      // If Terra Unassigned
-      if (type === 'terra' && !assigned) {
-        showTerraClaimForm(id, tether);
-        return;
-      }
-
-      // If Terra assigned or Aura
-      showDisplayPage(id, tether);
-    }
-
-    function showTerraClaimForm(id, tether) {
-      setMainContent(`
-        <div class="flex flex-col items-center justify-center min-h-[60vh]">
-          <h2 class="text-2xl font-bold mb-2 text-gray-900">Unassigned Terra Tether</h2>
-          <p class="mb-4 text-gray-600">This Terra Tether is unassigned. Please fill in the details to claim it.</p>
-          <form id="terra-claim-form" class="bg-gray-50 rounded-lg p-6 shadow max-w-md w-full">
-            <div class="mb-4">
-              <label class="block mb-1 font-semibold">Name</label>
-              <input name="name" required class="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500" placeholder="Your Name"/>
-            </div>
-            <div class="mb-4">
-              <label class="block mb-1 font-semibold">Email</label>
-              <input name="email" type="email" required class="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500" placeholder="you@example.com"/>
-            </div>
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold">Claim Tether</button>
-          </form>
-        </div>
-      `);
-      clearStatus();
-      document.getElementById('terra-claim-form').onsubmit = async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const entry = {
-          name: form.name.value.trim(),
-          email: form.email.value.trim(),
-          assigned: true,
-          assignedAt: new Date().toISOString()
-        };
-        try {
-          await update(dbRef(db, `tethers/${id}`), entry);
-          showStatus("Tether claimed successfully!", "success");
-          showDisplayPage(id, { ...tether, ...entry });
-        } catch (err) {
-          showStatus("Error saving: " + err.message, "error");
-        }
-      };
-    }
-
-    function showDisplayPage(id, tether) {
-      const type = tether.type || (tether.scope || '').toLowerCase();
-      setMainContent(`
-        <div class="flex flex-col items-center justify-center min-h-[60vh]">
-          <h2 class="text-2xl font-bold mb-2 text-gray-900">${type === "aura" ? "Aura" : "Terra"} Tether</h2>
-          <div class="mb-6 text-gray-700 text-center">
-            <div class="mb-2"><span class="font-semibold">Tether ID:</span> <span class="font-mono">${id}</span></div>
-            ${tether.name ? `<div><span class="font-semibold">Assigned to:</span> ${tether.name} (${tether.email || ''})</div>` : ''}
-            ${tether.assignedAt ? `<div class="text-xs text-gray-400">Assigned at: ${new Date(tether.assignedAt).toLocaleString()}</div>` : ''}
-          </div>
-          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold" onclick="window.history.pushState({}, '', '/'); window.location.reload();">Back to Home</button>
-        </div>
-      `);
-      clearStatus();
-    }
-
-    // Allow popstate navigation (back/forward buttons)
-    window.onpopstate = function() {
-      const id = getQueryParam('id');
-      if (!id) {
-        showSplash();
-      } else {
-        showTether(id);
-      }
-    };
-  </script>
-</head>
-<body class="bg-gray-100 font-sans min-h-screen flex flex-col">
-  <main id="main-content" class="flex-1 px-4 py-8"></main>
-  <footer class="w-full py-4 flex justify-center items-center">
-    <a href="/docs/admin.html" class="text-xs text-gray-400 hover:text-blue-600 transition">Admin</a>
-  </footer>
-  <div id="status" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50"></div>
-</body>
-</html>
+    await update(dbRef(db, `tethers/${id}`), newTether);
+    showStatus('Template assigned and tether created!', 'success');
+    showTether(id); // proceed to normal flow
+  };
+  return;
+}
