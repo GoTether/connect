@@ -5,12 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Template Creator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.saveToFirebase = async function(template) {
+      try {
+        await set(ref(db, 'global_templates/' + template.key), template);
+        document.getElementById('status').textContent = '✅ Template saved to Firebase!';
+      } catch (err) {
+        document.getElementById('status').textContent = '❌ Error saving template: ' + err.message;
+      }
+    };
+  </script>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
   <main class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md mt-10">
     <h1 class="text-2xl font-bold mb-6">Template Creator</h1>
-
-    <!-- Tether Type Selector -->
     <div class="mb-6">
       <span class="font-semibold">Tether Type:</span>
       <label class="inline-flex items-center ml-4">
@@ -20,22 +45,16 @@
         <input type="radio" name="log_scope" value="terra" class="mr-2">Terra
       </label>
     </div>
-
-    <!-- Template Info -->
     <div class="grid grid-cols-1 gap-4 mb-6">
       <div>
         <label class="block font-medium mb-1" for="template-label">Template Label</label>
         <input id="template-label" type="text" class="w-full border border-gray-300 p-2 rounded" required />
       </div>
     </div>
-
-    <!-- Sections Container -->
-    <div id="sections-container" class="space-y-6 mb-6">
-      <!-- Sections dynamically added here -->
+    <div id="sections-container" class="space-y-6 mb-6"></div>
+    <div class="mb-6">
+      <button id="add-section" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Section</button>
     </div>
-
-    <button id="add-section" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Section</button>
-
     <div class="mt-8">
       <button id="submit-template" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold">Create Template</button>
       <div id="status" class="text-red-600 mt-2"></div>
@@ -74,10 +93,10 @@
               </select>
             </div>
           </div>
-          <div class="mb-4">
+          <div class="space-y-3" id="fields-container-${sidx}">${renderFieldsHTML(sidx)}</div>
+          <div class="mt-4">
             <button class="bg-gray-700 text-white px-3 py-1 rounded" onclick="addField(${sidx})">+ Add Field</button>
           </div>
-          <div class="space-y-3">${renderFieldsHTML(sidx)}</div>
         `;
         container.appendChild(sectionEl);
       });
@@ -104,7 +123,7 @@
                 <option value="photo" ${field.type === 'photo' ? 'selected' : ''}>Photo</option>
               </select>
             </div>
-            <div class="col-span-2" id="dropdown-options-${sidx}-${fidx}" style="display:${field.type === 'dropdown' ? 'block' : 'none'}">
+            <div class="col-span-2" style="display:${field.type === 'dropdown' ? 'block' : 'none'}">
               <label class="block text-sm font-medium">Dropdown Options (comma separated)</label>
               <input type="text" class="w-full border border-gray-300 p-2 rounded" value="${field.options ? field.options.join(', ') : ''}" onchange="sections[${sidx}].fields[${fidx}].options = this.value.split(',').map(o => o.trim())" />
             </div>
@@ -130,13 +149,7 @@
     }
 
     function addSection() {
-      sections.push({
-        name: '',
-        description: '',
-        type: 'static',
-        undeletable: true,
-        fields: []
-      });
+      sections.push({ name: '', description: '', type: 'static', undeletable: true, fields: [] });
       renderSections();
     }
 
@@ -147,13 +160,7 @@
 
     function addField(sidx) {
       const sectionType = sections[sidx].type;
-      sections[sidx].fields.push({
-        name: '',
-        type: 'text',
-        required: false,
-        static: sectionType === 'static',
-        help: ''
-      });
+      sections[sidx].fields.push({ name: '', type: 'text', required: false, static: sectionType === 'static', help: '' });
       renderSections();
     }
 
@@ -183,8 +190,7 @@
         sections
       };
 
-      console.log('Generated Template:', template);
-      document.getElementById('status').textContent = 'Template generated in console (not saved yet).';
+      saveToFirebase(template);
     });
 
     renderSections();
