@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// --- Firebase Config ---
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
   authDomain: "tether-71e0c.firebaseapp.com",
@@ -15,36 +15,31 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-// --- DOM Hook ---
 const appEl = document.getElementById("app");
 
-// --- Helpers ---
-function getTetherId() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("id");
-}
+// Extract tether ID from URL
+const tetherId = new URLSearchParams(window.location.search).get("id");
 
-function showModal(message, callback) {
+// --- Modal control ---
+window.hideModal = function () {
+  document.getElementById("modal").classList.add("hidden");
+};
+function showModal(message, cb) {
   document.getElementById("modal-text").textContent = message;
   document.getElementById("modal").classList.remove("hidden");
   document.getElementById("modal").onclick = () => {
-    document.getElementById("modal").classList.add("hidden");
-    if (callback) callback();
+    hideModal();
+    if (cb) cb();
   };
 }
 
-function renderLoading() {
-  appEl.innerHTML = `<div class="text-center mt-32 text-gray-400 animate-pulse">Loading Tether...</div>`;
-}
-
-// --- No ID ---
-function renderNoId() {
+// --- No ID Provided ---
+function renderLanding() {
   appEl.innerHTML = `
-    <div class="text-center mt-32 space-y-6">
+    <div class="text-center mt-24 space-y-6">
       <h1 class="text-4xl font-bold">Welcome to Tether</h1>
       <p class="text-lg text-gray-300">Every object has a story. <span class="text-indigo-400">Tether to it.</span></p>
-      <p class="text-sm text-gray-400">Scan a QR or tap an NFC tag to begin. Or enter an ID manually:</p>
+      <p class="text-sm text-gray-400">Scan a QR or NFC tag, or enter an ID manually:</p>
       <div class="flex items-center justify-center gap-2 mt-4">
         <input id="manualId" type="text" placeholder="Enter Tether ID..." class="px-4 py-2 rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:ring focus:ring-indigo-500"/>
         <button onclick="goToTether()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">Go</button>
@@ -60,38 +55,11 @@ window.goToTether = function () {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// --- Reverse Geolocation ---
-async function getLocationName() {
-  try {
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-    const { latitude, longitude } = pos.coords;
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-    const data = await response.json();
-    return data.display_name || `${latitude}, ${longitude}`;
-  } catch {
-    return "Location Unknown";
-  }
-}
-
-// --- Template Preview UI ---
-function renderFieldPreview(fields, title) {
-  if (!fields?.length) return `<p class="text-gray-400">${title}: None</p>`;
-  return `
-    <h4 class="text-white font-semibold text-md mt-3">${title}</h4>
-    ${fields.map(f => `
-      <div>
-        <label class="block text-sm text-gray-300">${f.name}</label>
-        <input class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" disabled value="${f.type}" />
-      </div>
-    `).join("")}
-  `;
-}
-
-// --- Render Unassigned Tether ---
+// --- Unassigned Tether ---
 async function renderUnassigned(id) {
-  const snapshot = await get(ref(db, `global_templates`));
-  const templates = snapshot.val() || {};
-  const terraTemplates = Object.entries(templates).filter(([, t]) => t.log_scope === "terra");
+  const snap = await get(ref(db, `global_templates`));
+  const allTemplates = snap.val() || {};
+  const terraTemplates = Object.entries(allTemplates).filter(([, t]) => t.log_scope === "terra");
 
   appEl.innerHTML = `
     <div class="max-w-lg mx-auto text-center mt-24 space-y-6">
@@ -106,25 +74,21 @@ async function renderUnassigned(id) {
     </div>
   `;
 
-  const select = document.getElementById("templateSelect");
-  const preview = document.getElementById("templatePreview");
-  const assignBtn = document.getElementById("assignBtn");
-
-  select.addEventListener("change", async () => {
-    const selectedId = select.value;
-    const tSnap = await get(ref(db, `global_templates/${selectedId}`));
-    const template = tSnap.val();
-
+  document.getElementById("templateSelect").addEventListener("change", async () => {
+    const selectedId = document.getElementById("templateSelect").value;
+    const template = (await get(ref(db, `global_templates/${selectedId}`))).val();
+    const preview = document.getElementById("templatePreview");
     preview.innerHTML = `
-      <h3 class="text-lg font-semibold text-indigo-300">Preview: ${template.name}</h3>
+      <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
       <div class="bg-slate-700 p-4 rounded space-y-2">
-        ${renderFieldPreview(template.static_fields, "Static Fields")}
-        ${renderFieldPreview(template.dynamic_fields, "Dynamic Fields")}
+        <p class="text-sm text-gray-400">Static Fields:</p>
+        ${(template.static_fields || []).map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("")}
+        <p class="text-sm text-gray-400 mt-2">Dynamic Fields:</p>
+        ${(template.dynamic_fields || []).map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("")}
       </div>
     `;
-
-    assignBtn.classList.remove("hidden");
-    assignBtn.onclick = async () => {
+    document.getElementById("assignBtn").classList.remove("hidden");
+    document.getElementById("assignBtn").onclick = async () => {
       const staticData = {};
       (template.static_fields || []).forEach(f => staticData[f.name] = "");
       await set(ref(db, `tethers/${id}`), {
@@ -132,38 +96,33 @@ async function renderUnassigned(id) {
         static: staticData,
         logs: []
       });
-      window.location.reload();
+      showModal("Template assigned!", () => window.location.reload());
     };
   });
 }
 
-// --- Initialize Existing Tether ---
-async function renderTether(id) {
-  renderLoading();
+// --- Assigned Tether Display ---
+async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
-  if (!tSnap.exists()) return renderUnassigned(id);
-
   const tether = tSnap.val();
-  const templateSnap = await get(ref(db, `global_templates/${tether.template}`));
-  const template = templateSnap.val();
-
+  const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
   const logsSnap = await get(child(ref(db), `tethers/${id}/logs`));
   const logs = logsSnap.exists() ? Object.values(logsSnap.val()) : [];
 
   appEl.innerHTML = `
     <div class="space-y-8">
       <div>
-        <h1 class="text-3xl font-bold mb-1">${template.name}</h1>
-        <p class="text-sm text-gray-400 mb-1">Template: ${tether.template}</p>
-        <p class="text-sm text-gray-400 mb-1">Tether ID: ${id}</p>
+        <h1 class="text-3xl font-bold">${template.name}</h1>
+        <p class="text-sm text-gray-400">Template: ${tether.template}</p>
+        <p class="text-sm text-gray-400">Tether ID: ${id}</p>
         <button onclick="resetTether('${id}')" class="text-red-400 text-sm underline hover:text-red-300 mt-1">Reset this Tether</button>
       </div>
 
       <div class="bg-slate-700 p-4 rounded space-y-2">
-        ${(template.static_fields || []).map(field => `
+        ${(template.static_fields || []).map(f => `
           <div>
-            <label class="block text-sm text-gray-300 mb-1">${field.name}</label>
-            <input class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" value="${tether.static?.[field.name] || ''}" disabled />
+            <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
+            <input class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" value="${tether.static?.[f.name] || ''}" disabled />
           </div>
         `).join("")}
       </div>
@@ -173,11 +132,7 @@ async function renderTether(id) {
         ${(template.dynamic_fields || []).map(f => `
           <div>
             <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
-            ${f.type === 'dropdown'
-              ? `<select name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600">${f.options.map(opt => `<option>${opt}</option>`).join('')}</select>`
-              : f.type === 'textarea'
-              ? `<textarea name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" rows="3"></textarea>`
-              : `<input name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" />`}
+            <input name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" />
           </div>
         `).join("")}
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">Submit Entry</button>
@@ -186,8 +141,8 @@ async function renderTether(id) {
       <div class="space-y-3" id="logList">
         ${logs.map(log => `
           <div class="bg-slate-700 rounded p-3 border border-slate-600">
-            <p class="text-sm text-gray-300 mb-1">${new Date(log.timestamp).toLocaleString()} — <span class="text-indigo-400">${log.location || "Unknown"}</span></p>
-            ${Object.entries(log).filter(([k]) => !["timestamp", "location"].includes(k)).map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
+            <p class="text-sm text-gray-300 mb-1">${new Date(log.timestamp).toLocaleString()}</p>
+            ${Object.entries(log).filter(([k]) => k !== "timestamp").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
           </div>
         `).join("")}
       </div>
@@ -198,8 +153,7 @@ async function renderTether(id) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const logEntry = {
-      timestamp: new Date().toISOString(),
-      location: await getLocationName()
+      timestamp: new Date().toISOString()
     };
     for (const [key, val] of formData.entries()) {
       logEntry[key] = val;
@@ -209,7 +163,7 @@ async function renderTether(id) {
   };
 }
 
-// --- Reset Logic ---
+// --- Reset ---
 window.resetTether = function (id) {
   if (confirm("Are you sure you want to delete this Tether and start over?")) {
     remove(ref(db, `tethers/${id}`)).then(() => {
@@ -218,6 +172,13 @@ window.resetTether = function (id) {
   }
 };
 
-// --- Kickoff ---
-const id = getTetherId();
-id ? renderTether(id) : renderNoId();
+// --- App Start ---
+if (!tetherId) {
+  renderLanding();
+} else {
+  get(ref(db, `tethers/${tetherId}`)).then(snap => {
+    snap.exists() ? renderAssigned(tetherId) : renderUnassigned(tetherId);
+  }).catch(err => {
+    appEl.innerHTML = `<p class="text-red-500 mt-10 text-center">Error loading Tether: ${err.message}</p>`;
+  });
+}
