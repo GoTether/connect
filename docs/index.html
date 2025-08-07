@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tether Gateway</title>
 
-  <!-- Tailwind for visuals -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- ✅ Use Firebase v10 compat scripts -->
+  <!-- ✅ Firebase compat SDK (works with GitHub Pages) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
+  <!-- Google Fonts -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
     body {
@@ -22,7 +23,8 @@
 
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white flex items-center justify-center h-screen relative">
 
-  <div class="text-center">
+  <!-- Centered status block -->
+  <div class="text-center animate-fade-in">
     <div class="mb-4">
       <svg class="mx-auto w-20 h-20 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="1.5"
            viewBox="0 0 24 24">
@@ -34,12 +36,12 @@
     <p id="status-text" class="text-gray-300">Loading...</p>
   </div>
 
-  <!-- Timestamp -->
+  <!-- Build timestamp -->
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
 
-  <!-- ✅ Firebase Logic -->
+  <!-- Firebase + redirect logic -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
@@ -69,7 +71,12 @@
 
       db.ref('tethers/' + id).get()
         .then(snapshot => {
-          // Redirect whether the tether exists or not
+          // Optional: check if it exists
+          const exists = snapshot.exists();
+          statusEl.innerText = exists
+            ? "Tether found. Redirecting..."
+            : "Tether not found. Redirecting anyway...";
+
           setTimeout(() => {
             window.location.href = `display.html?id=${id}`;
           }, 1000);
@@ -79,6 +86,15 @@
           statusEl.innerText = "Error accessing Firebase.";
         });
     });
+
+    // Press "/" to debug
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '/') {
+        const id = new URLSearchParams(window.location.search).get('id');
+        alert("Tether ID: " + id);
+      }
+    });
   </script>
+
 </body>
 </html>
