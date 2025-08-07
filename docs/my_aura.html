@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="my_aura_dashboard">My Aura Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="my_aura_dashboard">My Aura Dashboard</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+        
+        <!-- Back Button -->
+        <button onclick="window.history.back()" class="btn-secondary">← Back</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Access Control -->
+    <div id="access-denied" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="authentication_required">Authentication required</h2>
+        <p>You need to be logged in to view your Aura logs.</p>
+        <div class="mt-4">
+          <button id="login-btn" class="btn-primary" data-i18n="login">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <!-- User Info -->
+      <div class="tether-card mb-6">
+        <h2 class="text-xl font-bold mb-4" data-i18n="my_aura">My Aura Logs</h2>
+        <div class="bg-purple-50 p-4 rounded">
+          <div class="flex items-center">
+            <div class="text-3xl mr-4">✨</div>
+            <div>
+              <h3 class="font-semibold">Welcome to your personal Aura space</h3>
+              <p class="text-sm text-gray-600">Your private logs from Aura Tethers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Summary Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Aura Tethers</h3>
+          <p class="text-3xl font-bold text-purple-600" id="total-aura-tethers">-</p>
+        </div>
+        
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Logs</h3>
+          <p class="text-3xl font-bold text-blue-600" id="total-aura-logs">-</p>
+        </div>
+        
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">This Month</h3>
+          <p class="text-3xl font-bold text-green-600" id="month-aura-logs">-</p>
+        </div>
+      </div>
+      
+      <!-- Aura Tethers List -->
+      <div class="tether-card">
+        <h2 class="text-xl font-bold mb-6">Your Aura Tethers</h2>
+        <div id="aura-tethers-list">
+          <!-- Aura tethers will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Log Details Modal -->
+  <div id="log-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold" id="modal-tether-title"></h3>
+        <button onclick="hideLogDetailsModal()" class="text-gray-500 hover:text-gray-700 text-xl">×</button>
+      </div>
+      <div id="modal-log-content">
+        <!-- Log details will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/my_aura.js"></script>
+</body>
+</html>
