@@ -138,6 +138,45 @@ function submitEntry(id) {
   document.querySelectorAll("#entryForm [data-name]").forEach(field => {
     entry[field.dataset.name] = field.value;
   });
+
+  function finalizeSave() {
+    db.ref("shared_logs/" + id + "/entries").push(entry).then(() => {
+      showModal("Entry saved successfully.");
+      document.querySelectorAll('#entryForm [data-name]').forEach(f => f.value = '');
+      displayLogEntries(id);
+    });
+  }
+
+  if (!navigator.geolocation) {
+    finalizeSave();
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    entry._lat = pos.coords.latitude;
+    entry._lng = pos.coords.longitude;
+
+    // 🌍 Reverse geocode with OpenStreetMap
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${entry._lat}&lon=${entry._lng}`)
+      .then(res => res.json())
+      .then(data => {
+        entry.location_name = data.display_name || "Unknown location";
+        finalizeSave();
+      })
+      .catch(() => {
+        entry.location_name = "Location unavailable";
+        finalizeSave();
+      });
+
+  }, () => {
+    entry.location_name = "Permission denied";
+    finalizeSave();
+  });
+}
+  const entry = { _timestamp: new Date().toISOString() };
+  document.querySelectorAll("#entryForm [data-name]").forEach(field => {
+    entry[field.dataset.name] = field.value;
+  });
   navigator.geolocation?.getCurrentPosition(pos => {
     entry._lat = pos.coords.latitude;
     entry._lng = pos.coords.longitude;
