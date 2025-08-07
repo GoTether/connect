@@ -19,11 +19,14 @@ const appEl = document.getElementById("app");
 const modalEl = document.getElementById("modal");
 const modalText = document.getElementById("modal-text");
 
-// Tether ID
+// Get tether ID from URL
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// Modal helpers
-window.hideModal = () => modalEl.classList.add("hidden");
+// Modal controls
+window.hideModal = function () {
+  modalEl.classList.add("hidden");
+};
+
 function showModal(message, cb) {
   modalText.textContent = message;
   modalEl.classList.remove("hidden");
@@ -42,7 +45,7 @@ window.resetTether = function (id) {
   }
 };
 
-// Landing screen
+// Landing page
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -59,12 +62,13 @@ function renderLanding() {
     if (e.key === "Enter") goToTether();
   });
 }
+
 window.goToTether = function () {
   const id = document.getElementById("manualId").value.trim();
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// Unassigned Tether screen
+// --- Unassigned Tether ---
 async function renderUnassigned(id) {
   const snap = await get(ref(db, `global_templates`));
   const allTemplates = snap.val() || {};
@@ -86,8 +90,8 @@ async function renderUnassigned(id) {
   document.getElementById("templateSelect").addEventListener("change", async () => {
     const selectedId = document.getElementById("templateSelect").value;
     const template = (await get(ref(db, `global_templates/${selectedId}`))).val();
-
-    document.getElementById("templatePreview").innerHTML = `
+    const preview = document.getElementById("templatePreview");
+    preview.innerHTML = `
       <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
       <div class="bg-slate-700 p-4 rounded space-y-2">
         <p class="text-sm text-gray-400">Static Fields:</p>
@@ -99,24 +103,24 @@ async function renderUnassigned(id) {
     document.getElementById("assignBtn").classList.remove("hidden");
 
     document.getElementById("assignBtn").onclick = () => {
-      showStaticEntryModal(id, selectedId, template);
+      showStaticForm(template, selectedId, id);
     };
   });
 }
 
-// Static Info Modal
-function showStaticEntryModal(tetherId, templateId, template) {
-  const formFields = (template.static_fields || []).map(f => `
-    <div>
-      <label class="block text-sm text-gray-200 mb-1">${f.name}</label>
-      <input name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"/>
-    </div>
-  `).join("");
-
+// --- Static Field Entry Form ---
+function showStaticForm(template, templateId, tetherId) {
+  const fields = template.static_fields || [];
   appEl.innerHTML = `
-    <div class="max-w-xl mx-auto mt-24 space-y-6 bg-slate-800 p-6 rounded shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">Enter Static Information</h2>
-      <form id="staticForm" class="space-y-4">${formFields}
+    <div class="max-w-lg mx-auto mt-20 space-y-6">
+      <h2 class="text-2xl font-semibold">Fill in Static Information</h2>
+      <form id="staticForm" class="space-y-4">
+        ${fields.map(f => `
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
+            <input name="${f.name}" required class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" />
+          </div>
+        `).join("")}
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">Save and Continue</button>
       </form>
     </div>
@@ -135,11 +139,14 @@ function showStaticEntryModal(tetherId, templateId, template) {
       static: staticData,
       logs: []
     });
-    window.location.reload();
+
+    showModal("Tether successfully registered!", () => {
+      window.location.href = `display.html?id=${tetherId}`;
+    });
   };
 }
 
-// Assigned Tether view
+// --- Assigned Tether ---
 async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
   const tether = tSnap.val();
@@ -190,7 +197,9 @@ async function renderAssigned(id) {
   document.getElementById("logForm").onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const logEntry = { timestamp: new Date().toISOString() };
+    const logEntry = {
+      timestamp: new Date().toISOString()
+    };
     for (const [key, val] of formData.entries()) {
       logEntry[key] = val;
     }
@@ -199,7 +208,7 @@ async function renderAssigned(id) {
   };
 }
 
-// App Entry Point
+// Boot logic
 if (!tetherId) {
   renderLanding();
 } else {
