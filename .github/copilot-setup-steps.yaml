@@ -1,0 +1,11 @@
+steps:
+  - name: Install Node.js
+    uses: actions/setup-node@v3
+    with:
+      node-version: '18'
+  - name: Install Firebase CLI
+    run: npm install -g firebase-tools
+  - name: Install Playwright
+    run: npm install playwright
+  - name: Install project dependencies
+    run: npm install

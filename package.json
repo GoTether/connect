@@ -1,0 +1,17 @@
+{
+  "name": "tether-system",
+  "version": "1.0.0",
+  "description": "Web-based Tether system connecting physical QR/NFC tags to dynamic web logs",
+  "main": "docs/index.html",
+  "scripts": {
+    "test": "playwright test",
+    "dev": "python -m http.server 8000 --directory docs",
+    "build": "echo 'No build step required for static site'"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0"
+  },
+  "keywords": ["tether", "qr", "nfc", "firebase", "github-pages"],
+  "author": "GoTether",
+  "license": "MIT"
+}

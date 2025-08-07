@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="edit_database">Edit Database</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="edit_database">Edit Database</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+        
+        <!-- Back to Admin -->
+        <a href="admin.html" class="btn-secondary" data-i18n="back_to_admin">Back to Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Access Control -->
+    <div id="access-denied" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="admin_only">Admin access required</h2>
+        <p data-i18n="authentication_required">You need admin privileges to access this page.</p>
+        <div class="mt-4">
+          <button id="login-btn" class="btn-primary" data-i18n="login">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <div class="max-w-6xl mx-auto">
+        <!-- Warning -->
+        <div class="alert-error mb-6">
+          <h2 class="text-lg font-semibold mb-2">⚠️ Danger Zone</h2>
+          <p>This page allows direct editing of the Firebase database. Use with extreme caution. Always backup data before making changes.</p>
+        </div>
+        
+        <!-- Database Sections -->
+        <div class="space-y-6">
+          <!-- Tethers -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Tethers</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('tethers')" class="btn-secondary">Reload</button>
+                <button onclick="saveData('tethers')" class="btn-success">Save</button>
+              </div>
+            </div>
+            <textarea id="tethers-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..."></textarea>
+          </div>
+          
+          <!-- Global Templates -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Global Templates</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('global_templates')" class="btn-secondary">Reload</button>
+                <button onclick="saveData('global_templates')" class="btn-success">Save</button>
+              </div>
+            </div>
+            <textarea id="global_templates-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..."></textarea>
+          </div>
+          
+          <!-- Shared Logs -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Shared Logs</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('shared_logs')" class="btn-secondary">Reload</button>
+                <button onclick="saveData('shared_logs')" class="btn-success">Save</button>
+              </div>
+            </div>
+            <textarea id="shared_logs-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..."></textarea>
+          </div>
+          
+          <!-- Reference Content -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Reference Content</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('reference_content')" class="btn-secondary">Reload</button>
+                <button onclick="saveData('reference_content')" class="btn-success">Save</button>
+              </div>
+            </div>
+            <textarea id="reference_content-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..."></textarea>
+          </div>
+          
+          <!-- Users -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Users (Limited View)</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('users')" class="btn-secondary">Reload</button>
+                <span class="text-sm text-gray-600">Read-only for privacy</span>
+              </div>
+            </div>
+            <textarea id="users-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..." readonly></textarea>
+          </div>
+          
+          <!-- Vendor Contacts -->
+          <div class="tether-card">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold">Vendor Contacts</h2>
+              <div class="space-x-2">
+                <button onclick="loadData('vendor_contacts')" class="btn-secondary">Reload</button>
+                <button onclick="saveData('vendor_contacts')" class="btn-success">Save</button>
+              </div>
+            </div>
+            <textarea id="vendor_contacts-data" class="json-editor w-full font-mono text-sm" placeholder="Loading..."></textarea>
+          </div>
+        </div>
+        
+        <!-- Bulk Operations -->
+        <div class="tether-card mt-6">
+          <h2 class="text-xl font-bold mb-4">Bulk Operations</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="loadAllData()" class="btn-primary">Load All Data</button>
+            <button onclick="exportAllData()" class="btn-secondary">Export Backup</button>
+            <button onclick="showImportDialog()" class="btn-danger">Import Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Import Modal -->
+  <div id="import-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4">Import Database Backup</h3>
+      <p class="text-gray-600 mb-4">⚠️ This will overwrite existing data. Make sure you have a backup!</p>
+      <input type="file" id="import-file" accept=".json" class="mb-4">
+      <div class="flex justify-end space-x-3">
+        <button onclick="hideImportDialog()" class="btn-secondary">Cancel</button>
+        <button onclick="importData()" class="btn-danger">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/firebasemgt.js"></script>
+</body>
+</html>

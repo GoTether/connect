@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="aura_studio">Aura Studio</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="aura_studio">Aura Studio</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+        
+        <!-- Back to Admin -->
+        <a href="admin.html" class="btn-secondary" data-i18n="back_to_admin">Back to Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Access Control -->
+    <div id="access-denied" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="admin_only">Admin access required</h2>
+        <p data-i18n="authentication_required">You need admin privileges to access this page.</p>
+        <div class="mt-4">
+          <button id="login-btn" class="btn-primary" data-i18n="login">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <div class="max-w-6xl mx-auto">
+        <!-- Welcome Section -->
+        <div class="tether-card mb-8">
+          <div class="flex items-center mb-4">
+            <div class="text-4xl mr-4">✨</div>
+            <div>
+              <h2 class="text-2xl font-bold" data-i18n="aura_studio">Aura Studio</h2>
+              <p class="text-gray-600">Manage Aura Tethers and reference content</p>
+            </div>
+          </div>
+          
+          <div class="bg-purple-50 border-l-4 border-purple-400 p-4 rounded">
+            <p class="text-sm">
+              <strong>Note:</strong> This is a placeholder implementation for Aura Studio. 
+              In a full implementation, this would include content management, 
+              Tether activation/deactivation tools, and advanced Aura features.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div class="tether-card text-center hover:shadow-lg transition-shadow cursor-pointer" onclick="showUploadModal()">
+            <div class="text-4xl mb-3">📤</div>
+            <h3 class="text-lg font-semibold mb-2" data-i18n="upload_content">Upload Content</h3>
+            <p class="text-gray-600 text-sm">Add reference content to Aura Tethers</p>
+          </div>
+          
+          <div class="tether-card text-center hover:shadow-lg transition-shadow cursor-pointer" onclick="showManageModal()">
+            <div class="text-4xl mb-3">⚙️</div>
+            <h3 class="text-lg font-semibold mb-2" data-i18n="manage_aura">Manage Aura Tethers</h3>
+            <p class="text-gray-600 text-sm">Activate, deactivate, and configure Aura Tethers</p>
+          </div>
+          
+          <div class="tether-card text-center hover:shadow-lg transition-shadow cursor-pointer" onclick="showAnalyticsModal()">
+            <div class="text-4xl mb-3">📊</div>
+            <h3 class="text-lg font-semibold mb-2">Aura Analytics</h3>
+            <p class="text-gray-600 text-sm">View usage statistics and insights</p>
+          </div>
+        </div>
+        
+        <!-- Aura Tethers Overview -->
+        <div class="tether-card mb-8">
+          <h3 class="text-xl font-bold mb-4">Aura Tethers Overview</h3>
+          <div id="aura-tethers-overview">
+            <!-- Aura tethers will be loaded here -->
+          </div>
+        </div>
+        
+        <!-- Reference Content Library -->
+        <div class="tether-card">
+          <h3 class="text-xl font-bold mb-4">Reference Content Library</h3>
+          <div id="reference-content-library">
+            <!-- Reference content will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Upload Content Modal -->
+  <div id="upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4" data-i18n="upload_content">Upload Content</h3>
+      <form id="upload-form">
+        <div class="mb-4">
+          <label class="form-label">Tether ID</label>
+          <input type="text" id="upload-tether-id" class="form-input" placeholder="Enter Tether ID" required>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Title</label>
+          <input type="text" id="upload-title" class="form-input" required>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Description</label>
+          <textarea id="upload-description" class="form-input" rows="3"></textarea>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Image URL (optional)</label>
+          <input type="url" id="upload-image" class="form-input" placeholder="https://example.com/image.jpg">
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="hideUploadModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-success">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manage Tethers Modal -->
+  <div id="manage-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4" data-i18n="manage_aura">Manage Aura Tethers</h3>
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+        <p class="text-sm">
+          <strong>Placeholder Feature:</strong> This would allow you to activate/deactivate Aura Tethers, 
+          set permissions, and configure advanced settings.
+        </p>
+      </div>
+      
+      <div class="space-y-4">
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+          <div>
+            <h4 class="font-semibold">Sample Aura Tether</h4>
+            <p class="text-sm text-gray-600">ID: aura_demo_001</p>
+          </div>
+          <div class="space-x-2">
+            <button class="btn-success text-sm" data-i18n="activate_tether">Activate</button>
+            <button class="btn-danger text-sm" data-i18n="deactivate_tether">Deactivate</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-end mt-6">
+        <button onclick="hideManageModal()" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Modal -->
+  <div id="analytics-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-4">Aura Analytics</h3>
+      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+        <p class="text-sm">
+          <strong>Placeholder Feature:</strong> This would show detailed analytics for Aura Tethers including:
+        </p>
+        <ul class="text-sm mt-2 list-disc list-inside">
+          <li>User engagement metrics</li>
+          <li>Content interaction rates</li>
+          <li>Geographic usage patterns</li>
+          <li>Popular content trends</li>
+        </ul>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="text-center p-4 bg-purple-50 rounded">
+          <div class="text-2xl font-bold text-purple-600">42</div>
+          <div class="text-sm text-gray-600">Active Aura Tethers</div>
+        </div>
+        <div class="text-center p-4 bg-blue-50 rounded">
+          <div class="text-2xl font-bold text-blue-600">1,337</div>
+          <div class="text-sm text-gray-600">Total Interactions</div>
+        </div>
+        <div class="text-center p-4 bg-green-50 rounded">
+          <div class="text-2xl font-bold text-green-600">89%</div>
+          <div class="text-sm text-gray-600">Engagement Rate</div>
+        </div>
+      </div>
+      
+      <div class="flex justify-end">
+        <button onclick="hideAnalyticsModal()" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/aura_studio.js"></script>
+</body>
+</html>

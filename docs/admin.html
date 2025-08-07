@@ -1,44 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin:0; }
-    .container { max-width: 700px; margin: 3em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #ddd; padding: 2em; }
-    h1 { margin-top: 0; }
-    .nav { margin: 2em 0; display: flex; gap: 2em; }
-    .nav a {
-      display: block; padding: 1em 2em; background: #eee; border-radius: 4px;
-      font-weight: bold; color: #222; text-decoration: none; font-size: 1.2em;
-      transition: background 0.2s;
-    }
-    .nav a:hover { background: #44c678; color: #fff; }
-    .stats { margin-bottom: 2em; color: #444; }
-    .user-info { font-size: 0.98em; color: #888; margin-bottom: 1em; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="admin_dashboard">Admin Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.min.js"></script>
 </head>
-<body>
-  <div class="container">
-    <h1>Admin Dashboard</h1>
-    <div class="user-info">Logged in as: <span id="admin-email">admin@example.com</span></div>
-    <div class="stats" id="stats"></div>
-    <div class="nav">
-      <a href="/template-manager.html">📝 Template Manager</a>
-      <a href="/user-management.html">👥 User Management</a>
-      <a href="/settings.html">⚙️ Settings</a>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="admin_dashboard">Admin Dashboard</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+      </div>
     </div>
-    <button onclick="logout()">Logout</button>
-  </div>
-  <script>
-    // (Optional) Populate user info and stats here.
-    function logout() {
-      // Add your sign-out logic here
-      alert("Logging out...");
-      // window.location.href = '/login.html';
-    }
-    // (Optional) Fetch and show stats.
-    // document.getElementById("stats").textContent = "Total templates: ...";
-  </script>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Access Control -->
+    <div id="access-denied" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="admin_only">Admin access required</h2>
+        <p data-i18n="authentication_required">You need admin privileges to access this page.</p>
+        <div class="mt-4">
+          <button id="login-btn" class="btn-primary" data-i18n="login">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <!-- Metrics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Tethers</h3>
+          <p class="text-3xl font-bold text-blue-600" id="total-tethers">-</p>
+        </div>
+        
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Logs</h3>
+          <p class="text-3xl font-bold text-green-600" id="total-logs">-</p>
+        </div>
+        
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Active Templates</h3>
+          <p class="text-3xl font-bold text-purple-600" id="total-templates">-</p>
+        </div>
+        
+        <div class="tether-card text-center">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Today's Activity</h3>
+          <p class="text-3xl font-bold text-orange-600" id="today-activity">-</p>
+        </div>
+      </div>
+      
+      <!-- Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Tether Types Chart -->
+        <div class="tether-card">
+          <h3 class="text-lg font-semibold mb-4">Tether Types Distribution</h3>
+          <canvas id="tether-types-chart" width="400" height="200"></canvas>
+        </div>
+        
+        <!-- Activity Timeline -->
+        <div class="tether-card">
+          <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+          <div id="recent-activity" class="space-y-3 max-h-64 overflow-y-auto">
+            <!-- Recent activity will be loaded here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Popular Templates -->
+      <div class="tether-card mb-8">
+        <h3 class="text-lg font-semibold mb-4">Popular Templates</h3>
+        <div id="popular-templates">
+          <!-- Popular templates will be loaded here -->
+        </div>
+      </div>
+      
+      <!-- Navigation Links -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="templatecreator.html" class="tether-card text-center hover:shadow-lg transition-shadow">
+          <div class="text-4xl mb-3">📝</div>
+          <h3 class="text-lg font-semibold" data-i18n="template_creator">Template Creator</h3>
+          <p class="text-gray-600 text-sm">Create and manage global templates</p>
+        </a>
+        
+        <a href="firebasemgt.html" class="tether-card text-center hover:shadow-lg transition-shadow">
+          <div class="text-4xl mb-3">🗃️</div>
+          <h3 class="text-lg font-semibold" data-i18n="edit_database">Edit Database</h3>
+          <p class="text-gray-600 text-sm">Direct database management</p>
+        </a>
+        
+        <a href="aura_studio.html" class="tether-card text-center hover:shadow-lg transition-shadow">
+          <div class="text-4xl mb-3">✨</div>
+          <h3 class="text-lg font-semibold" data-i18n="aura_studio">Aura Studio</h3>
+          <p class="text-gray-600 text-sm">Manage Aura Tethers</p>
+        </a>
+        
+        <a href="display.html?id=demo" class="tether-card text-center hover:shadow-lg transition-shadow">
+          <div class="text-4xl mb-3">🔗</div>
+          <h3 class="text-lg font-semibold">Demo Tether</h3>
+          <p class="text-gray-600 text-sm">Test Tether functionality</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/admin.js"></script>
 </body>
 </html>

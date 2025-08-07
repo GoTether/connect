@@ -2,134 +2,179 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Display Tether</title>
-  <script type="module">
-    import { database } from './firebase-init.js';
-    import { ref, get, set, update, push, remove } from "firebase/database";
-
-    function getQueryParam(name) {
-      return new URLSearchParams(window.location.search).get(name);
-    }
-
-    // Enhanced searchable dropdown for templates
-    function renderTemplateDropdown(templates, onSelect) {
-      const container = document.createElement('div');
-      container.style.maxWidth = '500px';
-      container.style.margin = '2em auto';
-
-      const searchInput = document.createElement('input');
-      searchInput.type = 'text';
-      searchInput.placeholder = 'Search templates...';
-      searchInput.style.width = '100%';
-      searchInput.style.marginBottom = '1em';
-
-      const list = document.createElement('div');
-      list.id = 'template-dropdown-list';
-
-      function renderList(filterText = '') {
-        list.innerHTML = '';
-        templates
-          .filter(t => 
-            t.label.toLowerCase().includes(filterText) ||
-            t.key.toLowerCase().includes(filterText) ||
-            t.fields.join(' ').toLowerCase().includes(filterText)
-          )
-          .forEach(template => {
-            const item = document.createElement('div');
-            item.className = 'template-list-item';
-            item.style.padding = '0.6em 1em';
-            item.style.marginBottom = '0.6em';
-            item.style.border = '1px solid #ccc';
-            item.style.borderRadius = '6px';
-            item.style.cursor = 'pointer';
-            item.style.background = '#fafaff';
-
-            item.innerHTML = `
-              <div style="font-weight:bold; font-size:1.1em;">${template.label} <span style="color:#777; font-size:0.9em;">(${template.key})</span></div>
-              <div style="color:#444; margin-top:0.3em;">
-                <strong>Fields:</strong> ${template.fields.length ? template.fields.join(', ') : '<span style="color:#999;">None</span>'}
-              </div>
-              <div style="font-size:0.9em; color:#999;">Version: ${template.version ?? 'N/A'}</div>
-            `;
-
-            item.addEventListener('click', () => onSelect(template));
-
-            item.addEventListener('mouseover', () => item.style.background = '#e8f5ff');
-            item.addEventListener('mouseout', () => item.style.background = '#fafaff');
-
-            list.appendChild(item);
-          });
-      }
-
-      searchInput.addEventListener('input', () => {
-        renderList(searchInput.value.trim().toLowerCase());
-      });
-
-      container.appendChild(searchInput);
-      container.appendChild(list);
-      renderList('');
-      return container;
-    }
-
-    // Fetch all global templates with key, label, fields, version
-    async function fetchAllTemplates() {
-      const snap = await get(ref(database, 'global_templates'));
-      if (!snap.exists()) return [];
-      const raw = snap.val();
-      return Object.entries(raw).map(([key, val]) => ({
-        key,
-        label: val.label || key,
-        fields: Array.isArray(val.fields) ? val.fields : [],
-        version: val.version ?? null
-      }));
-    }
-
-    async function main() {
-      const id = getQueryParam('id');
-      if (!id) {
-        document.body.innerHTML = "<h2>No tether id provided.</h2>";
-        return;
-      }
-
-      const tetherRef = ref(database, `tethers/${id}`);
-      const snap = await get(tetherRef);
-
-      if (!snap.exists()) {
-        // Unassigned Tether: fetch all templates and display enhanced selector
-        document.body.innerHTML = "<h2>Select a Template for this Tether</h2><div id='template-selector'></div>";
-        const templates = await fetchAllTemplates();
-        if (!templates.length) {
-          document.getElementById('template-selector').innerHTML = "<em>No templates found.</em>";
-          return;
-        }
-
-        const selector = renderTemplateDropdown(templates, async selected => {
-          // Set up Tether in Firebase
-          await set(tetherRef, {
-            log_scope: "Terra",
-            template: selected.key,
-            template_version: selected.version ?? null,
-            static_fields: {}
-          });
-          location.reload();
-        });
-
-        document.getElementById('template-selector').appendChild(selector);
-        return;
-      }
-
-      // ... rest of display.html logic (not shown, as this enhancement is for template selection only)
-    }
-
-    window.addEventListener('DOMContentLoaded', main);
-  </script>
-  <style>
-    body { font-family: sans-serif; background: #f7f7fa; margin: 2em; }
-    h2 { margin-top: 1em; }
-    .template-list-item:hover { box-shadow: 0 0 8px #b3d9fa; }
-    input[type="text"] { padding: 0.4em; border-radius: 5px; border: 1px solid #ccc; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="tether_display">Tether Display</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="tether_display">Tether Display</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="error">An error occurred</h2>
+        <p id="error-message"></p>
+        <div class="mt-4">
+          <button onclick="location.reload()" class="btn-primary" data-i18n="retry">Retry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unassigned Tether State -->
+    <div id="unassigned-state" class="hidden">
+      <div class="max-w-2xl mx-auto">
+        <div class="tether-card">
+          <h2 class="text-2xl font-bold text-center mb-4" data-i18n="select_template">Select Template</h2>
+          <p class="text-gray-600 text-center mb-6">
+            <span data-i18n="tether_not_found">Tether not found</span> 
+            <span class="font-mono text-blue-600" id="tether-id-display"></span>
+          </p>
+          
+          <!-- Template Selection -->
+          <div id="template-selection">
+            <h3 class="text-lg font-semibold mb-4" data-i18n="select_template">Select Template</h3>
+            <div id="template-options" class="space-y-3 mb-6">
+              <!-- Template options will be loaded here -->
+            </div>
+            
+            <!-- Custom Template Section -->
+            <div class="border-t pt-6">
+              <h3 class="text-lg font-semibold mb-4" data-i18n="custom_template">Create Custom Template</h3>
+              <form id="custom-template-form">
+                <div class="mb-4">
+                  <label class="form-label" data-i18n="template_name">Template Name</label>
+                  <input type="text" id="template-name" class="form-input" required>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="form-label">Template Type</label>
+                  <select id="template-type" class="form-input" required>
+                    <option value="terra" data-i18n="terra_tether">Terra Tether</option>
+                    <option value="aura" data-i18n="aura_tether">Aura Tether</option>
+                  </select>
+                </div>
+                
+                <div id="template-fields" class="mb-4">
+                  <label class="form-label">Fields</label>
+                  <div id="fields-container">
+                    <!-- Dynamic fields will be added here -->
+                  </div>
+                  <button type="button" id="add-field-btn" class="btn-secondary mt-2" data-i18n="add_field">Add Field</button>
+                </div>
+                
+                <button type="submit" class="btn-success w-full" data-i18n="save_template">Save Template</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assigned Tether State -->
+    <div id="assigned-state" class="hidden">
+      <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Tether Info Panel -->
+        <div class="tether-card">
+          <h2 class="text-xl font-bold mb-4">Tether Information</h2>
+          <div id="tether-info">
+            <!-- Tether details will be loaded here -->
+          </div>
+          
+          <!-- Admin Controls (visible only to admins) -->
+          <div id="admin-controls" class="mt-6 pt-6 border-t hidden">
+            <h3 class="text-lg font-semibold mb-3">Admin Controls</h3>
+            <div class="space-x-2">
+              <button id="reset-tether-btn" class="btn-danger" data-i18n="reset_tether">Reset Tether</button>
+              <button id="lock-toggle-btn" class="btn-secondary">Lock/Unlock</button>
+            </div>
+          </div>
+          
+          <!-- Navigation Links -->
+          <div id="navigation-links" class="mt-6 pt-6 border-t">
+            <!-- Links will be added based on tether type -->
+          </div>
+        </div>
+
+        <!-- Dynamic Content Panel -->
+        <div class="tether-card">
+          <h2 class="text-xl font-bold mb-4">Dynamic Content</h2>
+          
+          <!-- Reference Content (for Aura tethers) -->
+          <div id="reference-content" class="hidden mb-6">
+            <!-- Reference content will be loaded here -->
+          </div>
+          
+          <!-- Log Form -->
+          <div id="log-form-container">
+            <h3 class="text-lg font-semibold mb-3">Submit Log Entry</h3>
+            <form id="log-form">
+              <div id="dynamic-fields">
+                <!-- Dynamic form fields based on template -->
+              </div>
+              <button type="submit" class="btn-primary w-full mt-4" data-i18n="submit_log">Submit Log</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Log History -->
+      <div class="max-w-4xl mx-auto mt-6">
+        <div class="tether-card">
+          <h2 class="text-xl font-bold mb-4">Log History</h2>
+          <div id="log-history">
+            <!-- Log entries will be displayed here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4" id="modal-title"></h3>
+      <p class="text-gray-600 mb-6" id="modal-message"></p>
+      <div class="flex justify-end space-x-3">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-confirm" class="btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/display.js"></script>
 </body>
 </html>
