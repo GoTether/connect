@@ -1,15 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  get,
-  set,
-  push,
-  remove,
-  child
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, get, set, push, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Firebase Config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
   authDomain: "tether-71e0c.firebaseapp.com",
@@ -24,9 +16,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const appEl = document.getElementById("app");
+
+// Get ID from URL
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// Modal
+// Modal helpers
 window.hideModal = function () {
   document.getElementById("modal").classList.add("hidden");
 };
@@ -39,7 +33,7 @@ function showModal(message, cb) {
   };
 }
 
-// No ID provided
+// Landing screen
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -61,11 +55,11 @@ window.goToTether = function () {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// Unassigned Tether
+// Unassigned Tether → Assign template
 async function renderUnassigned(id) {
   const snap = await get(ref(db, `global_templates`));
-  const templates = snap.val() || {};
-  const terra = Object.entries(templates).filter(([, t]) => t.log_scope === "terra");
+  const allTemplates = snap.val() || {};
+  const terraTemplates = Object.entries(allTemplates).filter(([, t]) => (t.log_scope || '').toLowerCase() === "terra");
 
   appEl.innerHTML = `
     <div class="max-w-lg mx-auto text-center mt-24 space-y-6">
@@ -73,7 +67,7 @@ async function renderUnassigned(id) {
       <p class="text-gray-400 text-sm">ID: ${id}</p>
       <select id="templateSelect" class="w-full px-4 py-2 bg-slate-700 rounded text-white border border-slate-600">
         <option disabled selected value="">Select a Template...</option>
-        ${terra.map(([key, t]) => `<option value="${key}">${t.name}</option>`).join("")}
+        ${terraTemplates.map(([key, t]) => `<option value="${key}">${t.name}</option>`).join("")}
       </select>
       <div id="templatePreview" class="text-left mt-6 space-y-4"></div>
       <button id="assignBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white mt-4 hidden">Assign Template</button>
@@ -84,7 +78,6 @@ async function renderUnassigned(id) {
     const selectedId = document.getElementById("templateSelect").value;
     const template = (await get(ref(db, `global_templates/${selectedId}`))).val();
     const preview = document.getElementById("templatePreview");
-
     preview.innerHTML = `
       <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
       <div class="bg-slate-700 p-4 rounded space-y-2">
@@ -94,7 +87,6 @@ async function renderUnassigned(id) {
         ${(template.dynamic_fields || []).map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("")}
       </div>
     `;
-
     document.getElementById("assignBtn").classList.remove("hidden");
     document.getElementById("assignBtn").onclick = async () => {
       const staticData = {};
@@ -109,10 +101,10 @@ async function renderUnassigned(id) {
   });
 }
 
-// Assigned Tether
+// Display assigned tether
 async function renderAssigned(id) {
-  const tetherSnap = await get(ref(db, `tethers/${id}`));
-  const tether = tetherSnap.val();
+  const tSnap = await get(ref(db, `tethers/${id}`));
+  const tether = tSnap.val();
   const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
   const logsSnap = await get(child(ref(db), `tethers/${id}/logs`));
   const logs = logsSnap.exists() ? Object.values(logsSnap.val()) : [];
@@ -163,40 +155,15 @@ async function renderAssigned(id) {
     const logEntry = {
       timestamp: new Date().toISOString()
     };
-
     for (const [key, val] of formData.entries()) {
       logEntry[key] = val;
     }
-
-    // Get geolocation if available
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        logEntry["Location"] = `Lat: ${latitude.toFixed(5)}, Long: ${longitude.toFixed(5)}`;
-
-        // Attempt reverse geocoding (OpenStreetMap Nominatim API)
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-          const data = await res.json();
-          if (data?.display_name) {
-            logEntry["Location"] = data.display_name;
-          }
-        } catch {}
-
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved!", () => window.location.reload());
-      }, async () => {
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved!", () => window.location.reload());
-      });
-    } else {
-      await push(ref(db, `tethers/${id}/logs`), logEntry);
-      showModal("Entry saved!", () => window.location.reload());
-    }
+    await push(ref(db, `tethers/${id}/logs`), logEntry);
+    showModal("Entry saved!", () => window.location.reload());
   };
 }
 
-// Reset Tether
+// Reset button
 window.resetTether = function (id) {
   if (confirm("Are you sure you want to delete this Tether and start over?")) {
     remove(ref(db, `tethers/${id}`)).then(() => {
@@ -205,7 +172,7 @@ window.resetTether = function (id) {
   }
 };
 
-// Startup
+// App boot
 if (!tetherId) {
   renderLanding();
 } else {
