@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tether Display</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
     body { font-family: 'Inter', sans-serif; }
@@ -26,7 +23,7 @@
   <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-bg">
     <div class="bg-slate-700 text-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
       <p id="modal-text" class="mb-4"></p>
-      <button onclick="hideModal()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">OK</button>
+      <button onclick="document.getElementById('modal').classList.add('hidden')" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">OK</button>
     </div>
   </div>
 
@@ -34,20 +31,7 @@
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
-    };
-    firebase.initializeApp(firebaseConfig);
-  </script>
-
+  <!-- Load modular logic -->
   <script type="module" src="display-logic.js"></script>
 </body>
 </html>
