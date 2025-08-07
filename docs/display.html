@@ -3,35 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tether Display</title>
+  <title>Tether Log</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .fade-in { animation: fadeIn 0.6s ease-in-out; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    body {
+      font-family: 'Inter', sans-serif;
     }
-    .modal-bg { background-color: rgba(0, 0, 0, 0.6); }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .modal-bg {
+      background-color: rgba(0, 0, 0, 0.6);
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
   <div id="app" class="max-w-3xl mx-auto fade-in"></div>
 
-  <!-- Confirmation Modal -->
-  <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-bg">
-    <div class="bg-slate-700 text-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 z-50 hidden modal-bg flex items-center justify-center">
+    <div class="bg-slate-700 p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
       <p id="modal-text" class="mb-4"></p>
-      <button onclick="document.getElementById('modal').classList.add('hidden')" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">OK</button>
+      <button onclick="document.getElementById('modal').classList.add('hidden')" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">OK</button>
     </div>
   </div>
 
+  <!-- Footer build timestamp -->
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
 
-  <!-- Load modular logic -->
+  <!-- App logic -->
   <script type="module" src="display-logic.js"></script>
 </body>
 </html>
