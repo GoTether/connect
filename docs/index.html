@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tether Gateway</title>
 
-  <!-- Tailwind (for visual design) -->
+  <!-- Tailwind CSS (fine for dev/prototype use) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- ✅ Correct Firebase UMD version (must be before your custom script) -->
+  <!-- ✅ Correct Firebase UMD (global) bundle -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase.js"></script>
 
   <style>
@@ -33,24 +33,34 @@
     <p id="status-text" class="text-gray-300">Loading...</p>
   </div>
 
-  <!-- ✅ This script must come AFTER the Firebase script -->
+  <!-- ✅ Timestamp label to prove fresh load -->
+  <div class="fixed bottom-2 right-4 text-xs text-gray-500">
+    Build: <script>document.write(new Date().toLocaleString())</script>
+  </div>
+
+  <!-- ✅ Main logic: wrapped in DOMContentLoaded and placed AFTER Firebase loads -->
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
-    };
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!window.firebase || !firebase.initializeApp) {
+        document.getElementById('status-text').innerText = "Firebase did not load properly.";
+        console.error("Firebase not loaded.");
+        return;
+      }
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+      const firebaseConfig = {
+        apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+        authDomain: "tether-71e0c.firebaseapp.com",
+        databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+        projectId: "tether-71e0c",
+        storageBucket: "tether-71e0c.appspot.com",
+        messagingSenderId: "277809008742",
+        appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+        measurementId: "G-X7ZQ6DJYEN"
+      };
 
-    document.addEventListener('DOMContentLoaded', () => {
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
       const statusEl = document.getElementById('status-text');
@@ -62,9 +72,9 @@
 
       statusEl.innerText = "Checking Tether...";
 
-      firebase.database().ref('tethers/' + id).get()
+      db.ref('tethers/' + id).get()
         .then((snapshot) => {
-          // ✅ Redirect whether found or not (display.html handles fallback)
+          // ✅ Redirect whether found or not
           setTimeout(() => {
             window.location.href = `display.html?id=${id}`;
           }, 1000);
@@ -75,5 +85,6 @@
         });
     });
   </script>
+
 </body>
 </html>
