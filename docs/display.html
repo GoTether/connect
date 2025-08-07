@@ -4,50 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tether Log</title>
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="./assets/firebase-init.js"></script>
-  <script type="module">
-    import { ref, get, set, push, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { onAuthStateChanged, signInAnonymously, getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { database } from './assets/firebase-init.js';
 
-    const params = new URLSearchParams(window.location.search);
-    const tetherId = params.get('id');
-    const auth = getAuth();
+  <!-- Firebase compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
-    let uid = null;
-    let template = null;
-    let staticPath = null;
-    let logPath = null;
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-4">Tether Log</h1>
+    <p id="status-text" class="text-center text-gray-400 mb-6">Loading...</p>
+
+    <div id="static-fields" class="mb-8"></div>
+    <form id="log-form" class="mb-8"></form>
+    <div id="entries"></div>
+  </div>
+
+  <!-- Timestamp label -->
+  <div class="fixed bottom-2 right-4 text-xs text-gray-500">
+    Build: <script>document.write(new Date().toLocaleString())</script>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
     const statusText = document.getElementById('status-text');
     const staticContainer = document.getElementById('static-fields');
     const logForm = document.getElementById('log-form');
     const entriesContainer = document.getElementById('entries');
 
+    const params = new URLSearchParams(window.location.search);
+    const tetherId = params.get('id');
+    let uid = null;
+    let template = null;
+    let logPath = null;
+    let staticPath = null;
+
     if (!tetherId) {
-      statusText.innerText = "No Tether ID found in URL.";
+      statusText.innerText = "No Tether ID in URL.";
     }
 
-    onAuthStateChanged(auth, async user => {
-      if (!user) await signInAnonymously(auth);
+    auth.onAuthStateChanged(async user => {
+      if (!user) await auth.signInAnonymously();
       uid = auth.currentUser.uid;
-      await loadTether();
+      loadTether();
     });
 
     async function loadTether() {
-      const tetherSnap = await get(ref(database, `tethers/${tetherId}`));
+      const tetherSnap = await db.ref(`tethers/${tetherId}`).get();
       if (!tetherSnap.exists()) return statusText.innerText = "Tether not found.";
       const tether = tetherSnap.val();
+      staticPath = `tethers/${tetherId}/static`;
 
-      // Load template
-      const templateSnap = await get(ref(database, `global_templates/${tether.template_id}`));
+      const templateSnap = await db.ref(`global_templates/${tether.template_id}`).get();
       if (!templateSnap.exists()) return statusText.innerText = "Template not found.";
       template = templateSnap.val();
 
-      // Set static and log paths
-      staticPath = `tethers/${tetherId}/static`;
-      logPath = (template.log_scope === "terra")
+      logPath = template.log_scope === "terra"
         ? `shared_logs/${tetherId}/entries`
         : `users/${uid}/logs/${tether.template_id}/entries`;
 
@@ -57,7 +94,7 @@
     }
 
     async function renderStaticSection() {
-      const snap = await get(ref(database, staticPath));
+      const snap = await db.ref(staticPath).get();
       const values = snap.exists() ? snap.val() : {};
 
       staticContainer.innerHTML = `<h2 class="text-xl font-semibold mb-2">Info</h2>` +
@@ -71,7 +108,7 @@
     }
 
     function renderLogForm() {
-      logForm.innerHTML = `<h2 class="text-xl font-semibold mb-4">Log Entry</h2>` +
+      logForm.innerHTML = `<h2 class="text-xl font-semibold mb-4">New Entry</h2>` +
         template.dynamic_fields.map(field => {
           const name = field.name;
           const label = `<label class="block mb-1 text-gray-300">${name}</label>`;
@@ -88,8 +125,7 @@
               field.options.map(opt =>
                 `<label class="inline-flex items-center mr-4 text-gray-200">
                   <input type="radio" name="${name}" value="${opt}" class="mr-1">${opt}
-                </label>`
-              ).join('') + `</div>`;
+                </label>`).join('') + `</div>`;
           if (field.type === "checkbox")
             return `<div class="mb-4"><label class="inline-flex items-center text-gray-200">
               <input type="checkbox" name="${name}" class="mr-2">${name}
@@ -97,7 +133,8 @@
         }).join('') +
         `<button class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" id="submit-log">Submit</button>`;
 
-      document.getElementById("submit-log").onclick = async () => {
+      document.getElementById("submit-log").onclick = async (e) => {
+        e.preventDefault();
         const entry = { _timestamp: new Date().toISOString() };
         for (const field of template.dynamic_fields) {
           const el = logForm.querySelector(`[name="${field.name}"]`);
@@ -112,7 +149,6 @@
           }
         }
 
-        // Add geolocation if allowed
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async pos => {
             entry._geo = {
@@ -120,16 +156,16 @@
               lng: pos.coords.longitude,
               accuracy: pos.coords.accuracy
             };
-            await push(ref(database, logPath), entry);
+            await db.ref(logPath).push(entry);
             logForm.reset();
             renderEntries();
           }, async () => {
-            await push(ref(database, logPath), entry);
+            await db.ref(logPath).push(entry);
             logForm.reset();
             renderEntries();
           });
         } else {
-          await push(ref(database, logPath), entry);
+          await db.ref(logPath).push(entry);
           logForm.reset();
           renderEntries();
         }
@@ -137,7 +173,7 @@
     }
 
     async function renderEntries() {
-      const snap = await get(ref(database, logPath));
+      const snap = await db.ref(logPath).get();
       if (!snap.exists()) return entriesContainer.innerHTML = "<p class='text-gray-400'>No entries yet.</p>";
 
       const entries = Object.values(snap.val()).reverse();
@@ -153,23 +189,5 @@
         `).join('');
     }
   </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-  </style>
-</head>
-<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
-
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-4">Tether Log</h1>
-    <p id="status-text" class="text-center text-gray-400 mb-6">Loading...</p>
-
-    <div id="static-fields" class="mb-8"></div>
-    <form id="log-form" class="mb-8"></form>
-    <div id="entries"></div>
-  </div>
-
 </body>
 </html>
