@@ -1,75 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Template Creator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    window.saveToFirebase = async function(template) {
-      try {
-        await set(ref(db, 'global_templates/' + template.key), template);
-        if (window.confirm('Your template has been saved successfully.')) {
-          window.location.reload();
-        }
-      } catch (err) {
-        document.getElementById('status').textContent = '❌ Error saving template: ' + err.message;
-      }
-    };
-  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="template_creator">Template Creator</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
-  <div class="w-full text-center py-2 bg-gray-200 text-sm">
-    <a href="/docs/admin.html" class="text-blue-600 hover:underline">← Back to Admin Dashboard</a>
-  </div>
-  <main class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md mt-6">
-    <h1 class="text-2xl font-bold mb-6">Template Creator</h1>
-    <div class="mb-6">
-      <span class="font-semibold">Tether Type:</span>
-      <label class="inline-flex items-center ml-4">
-        <input type="radio" name="log_scope" value="aura" checked class="mr-2">Aura
-      </label>
-      <label class="inline-flex items-center ml-6">
-        <input type="radio" name="log_scope" value="terra" class="mr-2">Terra
-      </label>
-    </div>
-    <div class="grid grid-cols-1 gap-4 mb-6">
-      <div>
-        <label class="block font-medium mb-1" for="template-label">Template Label</label>
-        <input id="template-label" type="text" class="w-full border border-gray-300 p-2 rounded" required />
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="template_creator">Template Creator</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+        
+        <!-- Back to Admin -->
+        <a href="admin.html" class="btn-secondary" data-i18n="back_to_admin">Back to Admin</a>
       </div>
     </div>
-    <div id="sections-container" class="space-y-6 mb-6"></div>
-    <div class="mb-6">
-      <button id="add-section" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Section</button>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Access Control -->
+    <div id="access-denied" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="admin_only">Admin access required</h2>
+        <p data-i18n="authentication_required">You need admin privileges to access this page.</p>
+        <div class="mt-4">
+          <button id="login-btn" class="btn-primary" data-i18n="login">Login</button>
+        </div>
+      </div>
     </div>
-    <div class="mt-8">
-      <button id="submit-template" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold">Create Template</button>
-      <div id="status" class="text-red-600 mt-2"></div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <div class="max-w-4xl mx-auto">
+        <!-- Create Template Section -->
+        <div class="tether-card mb-6">
+          <h2 class="text-2xl font-bold mb-6" data-i18n="create_template">Create Template</h2>
+          
+          <form id="template-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="form-label" data-i18n="template_name">Template Name</label>
+                <input type="text" id="template-name" class="form-input" required>
+              </div>
+              
+              <div>
+                <label class="form-label">Template Type</label>
+                <select id="template-type" class="form-input" required>
+                  <option value="terra" data-i18n="terra_tether">Terra Tether</option>
+                  <option value="aura" data-i18n="aura_tether">Aura Tether</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <label class="form-label">Template Description</label>
+              <textarea id="template-description" class="form-input" rows="3" placeholder="Optional description of this template"></textarea>
+            </div>
+            
+            <div class="mt-6">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Template Fields</h3>
+                <button type="button" id="add-field-btn" class="btn-secondary" data-i18n="add_field">Add Field</button>
+              </div>
+              
+              <div id="fields-container" class="space-y-3">
+                <!-- Dynamic fields will be added here -->
+              </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+              <button type="button" id="reset-form-btn" class="btn-secondary">Reset Form</button>
+              <button type="submit" class="btn-success" data-i18n="save_template">Save Template</button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Existing Templates Section -->
+        <div class="tether-card">
+          <h2 class="text-2xl font-bold mb-6">Existing Templates</h2>
+          
+          <div id="templates-list">
+            <!-- Existing templates will be loaded here -->
+          </div>
+        </div>
+      </div>
     </div>
   </main>
-  <div class="w-full text-center py-4 bg-gray-100 text-sm">
-    <a href="/docs/admin.html" class="text-blue-600 hover:underline">← Back to Admin Dashboard</a>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4" id="modal-title"></h3>
+      <p class="text-gray-600 mb-6" id="modal-message"></p>
+      <div class="flex justify-end space-x-3">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-confirm" class="btn-danger">Confirm</button>
+      </div>
+    </div>
   </div>
-  <script>
-    // Existing JS unchanged...
-  </script>
+
+  <script type="module" src="js/templatecreator.js"></script>
 </body>
 </html>

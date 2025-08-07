@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="contact_editor">Vendor Contact Editor</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center">
+        <img src="assets/logo.png" alt="Tether Logo" class="w-8 h-8 mr-3" onerror="this.style.display='none'">
+        <h1 class="text-xl font-bold text-gray-800" data-i18n="contact_editor">Vendor Contact Editor</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="language-selector" class="text-sm border rounded px-2 py-1" aria-label="Select language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="af">Afrikaans</option>
+          <option value="ru">Русский</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+        
+        <!-- Auth Status -->
+        <div id="auth-status" class="text-sm text-gray-600">
+          <span id="auth-info" data-i18n="loading">Loading...</span>
+          <button id="auth-button" class="ml-2 text-blue-600 hover:text-blue-800" style="display: none;"></button>
+        </div>
+        
+        <!-- Back Button -->
+        <button onclick="goBack()" class="btn-secondary">← Back</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+      <div class="spinner"></div>
+      <p class="mt-4 text-gray-600" data-i18n="loading">Loading...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden">
+      <div class="alert-error max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-2" data-i18n="error">An error occurred</h2>
+        <p id="error-message"></p>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+      <div class="max-w-4xl mx-auto">
+        <!-- Tether Info -->
+        <div class="tether-card mb-6">
+          <h2 class="text-xl font-bold mb-4" data-i18n="vendor_contacts">Vendor Contacts</h2>
+          <div class="bg-blue-50 p-4 rounded mb-4">
+            <h3 class="font-semibold">Tether Information</h3>
+            <p class="text-sm text-gray-600">ID: <span class="font-mono" id="tether-id"></span></p>
+            <p class="text-sm text-gray-600">Type: <span id="tether-type"></span></p>
+          </div>
+        </div>
+        
+        <!-- Add Contact Form -->
+        <div class="tether-card mb-6">
+          <h3 class="text-lg font-semibold mb-4" data-i18n="add_contact">Add Contact</h3>
+          <form id="contact-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="form-label">Contact Type</label>
+                <select id="contact-type" class="form-input" required>
+                  <option value="">Select Type</option>
+                  <option value="vendor">Vendor</option>
+                  <option value="supplier">Supplier</option>
+                  <option value="manufacturer">Manufacturer</option>
+                  <option value="distributor">Distributor</option>
+                  <option value="support">Support</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="form-label">Company/Name</label>
+                <input type="text" id="contact-name" class="form-input" required>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="form-label">Phone</label>
+                <input type="tel" id="contact-phone" class="form-input">
+              </div>
+              
+              <div>
+                <label class="form-label">Email</label>
+                <input type="email" id="contact-email" class="form-input">
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label">Website</label>
+              <input type="url" id="contact-website" class="form-input" placeholder="https://example.com">
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label">Address</label>
+              <textarea id="contact-address" class="form-input" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label">Notes</label>
+              <textarea id="contact-notes" class="form-input" rows="3" placeholder="Additional information about this contact"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" id="clear-form-btn" class="btn-secondary">Clear Form</button>
+              <button type="submit" class="btn-success" data-i18n="save_contact">Save Contact</button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Existing Contacts -->
+        <div class="tether-card">
+          <h3 class="text-lg font-semibold mb-4">Existing Contacts</h3>
+          <div id="contacts-list">
+            <!-- Contacts will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit Contact Modal -->
+  <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-4">Edit Contact</h3>
+      <form id="edit-form">
+        <input type="hidden" id="edit-contact-id">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="form-label">Contact Type</label>
+            <select id="edit-contact-type" class="form-input" required>
+              <option value="">Select Type</option>
+              <option value="vendor">Vendor</option>
+              <option value="supplier">Supplier</option>
+              <option value="manufacturer">Manufacturer</option>
+              <option value="distributor">Distributor</option>
+              <option value="support">Support</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="form-label">Company/Name</label>
+            <input type="text" id="edit-contact-name" class="form-input" required>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="form-label">Phone</label>
+            <input type="tel" id="edit-contact-phone" class="form-input">
+          </div>
+          
+          <div>
+            <label class="form-label">Email</label>
+            <input type="email" id="edit-contact-email" class="form-input">
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Website</label>
+          <input type="url" id="edit-contact-website" class="form-input">
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Address</label>
+          <textarea id="edit-contact-address" class="form-input" rows="3"></textarea>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Notes</label>
+          <textarea id="edit-contact-notes" class="form-input" rows="3"></textarea>
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="hideEditModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-success">Update Contact</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4" id="modal-title"></h3>
+      <p class="text-gray-600 mb-6" id="modal-message"></p>
+      <div class="flex justify-end space-x-3">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-confirm" class="btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/contacteditor.js"></script>
+</body>
+</html>
