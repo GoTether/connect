@@ -1,49 +1,68 @@
-if (!snapshot.exists()) {
-  // Fetch templates from Firebase
-  const templatesSnap = await get(dbRef(db, `global_templates`));
-  if (!templatesSnap.exists()) {
-    setMainContent(`
-      <div class="text-red-600 text-center p-8">No templates are available. Please contact the administrator.</div>
-    `);
-    return;
-  }
-  const templates = templatesSnap.val();
-  const templateOptions = Object.entries(templates).map(
-    ([tid, tpl]) =>
-      `<option value="${tid}" data-scope="${tpl.scope || tpl.type || ''}">${tpl.label || tid} (${tpl.scope || tpl.type || ''})</option>`
-  ).join('');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tether Gateway</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="./assets/firebase-init.js"></script>
+  <script type="module">
+    import { ref, get, getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { database } from './assets/firebase-init.js';
 
-  setMainContent(`
-    <div class="flex flex-col items-center justify-center min-h-[60vh]">
-      <h2 class="text-xl font-bold mb-2 text-gray-900">Assign Template to New Tether</h2>
-      <p class="mb-4 text-gray-600">No tether found with ID: <span class="font-mono">${id}</span></p>
-      <form id="assign-template-form" class="bg-gray-50 rounded-lg p-6 shadow max-w-md w-full">
-        <label class="block mb-2 font-semibold">Select a Template</label>
-        <select name="template" class="w-full mb-4 px-3 py-2 border rounded" required>
-          <option value="">-- Select Template --</option>
-          ${templateOptions}
-        </select>
-        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold">Assign Template</button>
-      </form>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      const statusEl = document.getElementById('status-text');
+
+      if (!id) {
+        statusEl.innerText = "No Tether ID provided.";
+        return;
+      }
+
+      statusEl.innerText = "Checking Tether...";
+
+      try {
+        const snapshot = await get(ref(database, 'tethers/' + id));
+        setTimeout(() => {
+          window.location.href = `display.html?id=${id}`;
+        }, 1000); // delay for UX polish
+      } catch (err) {
+        statusEl.innerText = "Error checking Tether. Please try again.";
+        console.error(err);
+      }
+    });
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white flex items-center justify-center h-screen relative">
+
+  <div class="text-center animate-fade-in">
+    <div class="mb-4">
+      <svg class="mx-auto w-20 h-20 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="1.5"
+           viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 6v6l4 2m6 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
     </div>
-  `);
-  clearStatus();
+    <h1 class="text-3xl font-semibold mb-2">Connecting to Tether</h1>
+    <p id="status-text" class="text-gray-300">Loading...</p>
+  </div>
 
-  document.getElementById('assign-template-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const templateId = form.template.value;
-    const selectedOption = form.template.selectedOptions[0];
-    const scope = selectedOption.getAttribute('data-scope') || 'terra';
-    // Create new tether in database
-    const newTether = {
-      type: scope,
-      template: templateId,
-      assigned: false
-    };
-    await update(dbRef(db, `tethers/${id}`), newTether);
-    showStatus('Template assigned and tether created!', 'success');
-    showTether(id); // proceed to normal flow
-  };
-  return;
-}
+  <script>
+    // Debug reveal (press /)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '/') {
+        const id = new URLSearchParams(window.location.search).get('id');
+        alert("Tether ID: " + id);
+      }
+    });
+  </script>
+
+</body>
+</html>
