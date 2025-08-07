@@ -1,371 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Template Creator</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
-    .container { max-width: 800px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #dadada; padding: 2em; }
-    h1 { margin-top: 0; }
-    .mode-switch { display: flex; gap: 1em; margin-bottom: 2em; }
-    .mode-btn {
-      border: none;
-      background: #eee;
-      color: #333;
-      padding: 0.6em 2em;
-      border-radius: 4px;
-      font-size: 1.1em;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background .2s, color .2s;
-    }
-    .mode-btn.active-aura {
-      background: #44c678;
-      color: #fff;
-    }
-    .mode-btn.active-terra {
-      background: #3286ff;
-      color: #fff;
-    }
-    .form-section { margin-bottom: 2em; }
-    label { display: block; margin-bottom: 0.4em; font-weight: bold; }
-    input, textarea, select { width: 100%; padding: 0.5em; margin-bottom: 1em; border-radius: 4px; border: 1px solid #ccc; font-size: 1em; }
-    .fields-list, .sections-list { margin-bottom: 1em; }
-    .field-card, .section-card {
-      background: #f2f2f2;
-      border-radius: 4px;
-      padding: 1em;
-      margin-bottom: 1em;
-      border: 1px solid #e0e0e0;
-    }
-    .field-actions, .section-actions { display: flex; gap: 0.5em; margin-top: 0.5em; }
-    .action-btn {
-      background: #eee; border: none; border-radius: 3px;
-      font-weight: bold; cursor: pointer; padding: 0.3em 1.2em; transition: background .2s;
-    }
-    .action-btn:hover { background: #d2f0e0; }
-    .delete-btn { background: #e44; color: #fff; }
-    .delete-btn:hover { background: #b22; }
-    .add-btn { margin-top: 1em; background: #44c678; color: #fff; }
-    .add-btn:hover { background: #2a9c5d; }
-    .submit-btn {
-      background: #3286ff;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 1.1em;
-      font-weight: bold;
-      padding: 0.8em 2.5em;
-      cursor: pointer;
-      transition: background .2s;
-    }
-    .submit-btn:hover { background: #2462b3; }
-    .status { margin: 0.5em 0; color: #c44; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <div class="container">
-    <h1>Template Creator</h1>
-    <div class="mode-switch">
-      <button id="aura-btn" class="mode-btn active-aura">Aura</button>
-      <button id="terra-btn" class="mode-btn">Terra</button>
+<body class="bg-gray-100 text-gray-800 font-sans">
+  <main class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md mt-10">
+    <h1 class="text-2xl font-bold mb-6">Template Creator</h1>
+
+    <!-- Tether Type Selector -->
+    <div class="mb-6">
+      <span class="font-semibold">Tether Type:</span>
+      <label class="inline-flex items-center ml-4">
+        <input type="radio" name="log_scope" value="aura" checked class="mr-2">Aura
+      </label>
+      <label class="inline-flex items-center ml-6">
+        <input type="radio" name="log_scope" value="terra" class="mr-2">Terra
+      </label>
     </div>
 
-    <form id="template-form">
-      <!-- COMMON FIELDS -->
-      <div class="form-section">
-        <label for="template-label">Template Label</label>
-        <input type="text" id="template-label" required>
-        <label for="template-key">Template Key</label>
-        <input type="text" id="template-key" required>
+    <!-- Template Info -->
+    <div class="grid grid-cols-1 gap-4 mb-6">
+      <div>
+        <label class="block font-medium mb-1" for="template-label">Template Label</label>
+        <input id="template-label" type="text" class="w-full border border-gray-300 p-2 rounded" required />
       </div>
-
-      <!-- AURA MODE -->
-      <div id="aura-section">
-        <div class="fields-list" id="aura-fields-list"></div>
-        <button type="button" class="add-btn" id="add-aura-field">+ Add Aura Field</button>
-        <div class="form-section">
-          <label for="aura-links">Links (optional, comma separated URLs)</label>
-          <input type="text" id="aura-links">
-        </div>
+      <div>
+        <label class="block font-medium mb-1" for="template-key">Template Key (kebab-case)</label>
+        <input id="template-key" type="text" class="w-full border border-gray-300 p-2 rounded" required />
       </div>
+    </div>
 
-      <!-- TERRA MODE -->
-      <div id="terra-section" style="display:none;">
-        <div class="sections-list" id="terra-sections-list"></div>
-        <button type="button" class="add-btn" id="add-terra-section">+ Add Terra Section</button>
-        <div class="form-section">
-          <label for="terra-version">Version</label>
-          <input type="text" id="terra-version" required>
-        </div>
-      </div>
+    <!-- Sections Container -->
+    <div id="sections-container" class="space-y-6 mb-6">
+      <!-- Sections dynamically added here -->
+    </div>
 
-      <button type="submit" class="submit-btn">Create Template</button>
-      <div class="status" id="status"></div>
-    </form>
-  </div>
+    <button id="add-section" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Section</button>
+
+    <div class="mt-8">
+      <button id="submit-template" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold">Create Template</button>
+      <div id="status" class="text-red-600 mt-2"></div>
+    </div>
+  </main>
 
   <script>
-    // --- Mode Switching ---
-    let mode = 'aura';
+    let sections = [];
 
-    const auraBtn = document.getElementById('aura-btn');
-    const terraBtn = document.getElementById('terra-btn');
-    const auraSection = document.getElementById('aura-section');
-    const terraSection = document.getElementById('terra-section');
-
-    auraBtn.onclick = () => setMode('aura');
-    terraBtn.onclick = () => setMode('terra');
-
-    function setMode(newMode) {
-      mode = newMode;
-      if (mode === 'aura') {
-        auraBtn.classList.add('active-aura');
-        auraBtn.classList.remove('active-terra');
-        terraBtn.classList.remove('active-terra');
-        terraBtn.classList.remove('active-aura');
-        terraSection.style.display = 'none';
-        auraSection.style.display = '';
-      } else {
-        terraBtn.classList.add('active-terra');
-        terraBtn.classList.remove('active-aura');
-        auraBtn.classList.remove('active-terra');
-        auraBtn.classList.remove('active-aura');
-        auraSection.style.display = 'none';
-        terraSection.style.display = '';
-      }
-    }
-
-    // --- AURA FIELDS LOGIC ---
-    let auraFields = [];
-
-    function renderAuraFields() {
-      const list = document.getElementById('aura-fields-list');
-      list.innerHTML = '';
-      auraFields.forEach((f, idx) => {
-        const card = document.createElement('div');
-        card.className = 'field-card';
-        card.innerHTML = `
-          <label>Field Label</label>
-          <input type="text" value="${f.label || ''}" onchange="this.value && (auraFields[${idx}].label = this.value)">
-          <label>Type</label>
-          <select onchange="auraFields[${idx}].type = this.value">
-            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Text</option>
-            <option value="number" ${f.type === 'number' ? 'selected' : ''}>Number</option>
-            <option value="dropdown" ${f.type === 'dropdown' ? 'selected' : ''}>Dropdown</option>
-          </select>
-          <div id="aura-options-${idx}" style="display:${f.type === 'dropdown' ? 'block' : 'none'};">
-            <label>Dropdown Options (comma separated)</label>
-            <input type="text" value="${f.options ? f.options.join(',') : ''}" 
-              onchange="auraFields[${idx}].options = this.value.split(',').map(x => x.trim()).filter(Boolean)">
+    function renderSections() {
+      const container = document.getElementById('sections-container');
+      container.innerHTML = '';
+      sections.forEach((section, sidx) => {
+        const sectionEl = document.createElement('div');
+        sectionEl.className = 'border p-4 rounded bg-gray-50';
+        sectionEl.innerHTML = `
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-semibold text-lg">Section ${sidx + 1}</h2>
+            <button class="text-red-500 hover:underline" onclick="removeSection(${sidx})">Delete Section</button>
           </div>
-          <div class="field-actions">
-            <button type="button" class="delete-btn action-btn" onclick="removeAuraField(${idx})">Delete Field</button>
+          <div class="grid grid-cols-1 gap-4 mb-4">
+            <div>
+              <label class="block font-medium mb-1">Section Name</label>
+              <input type="text" class="w-full border border-gray-300 p-2 rounded" value="${section.name}" onchange="sections[${sidx}].name = this.value" />
+            </div>
+            <div>
+              <label class="block font-medium mb-1">Description</label>
+              <input type="text" class="w-full border border-gray-300 p-2 rounded" value="${section.description}" onchange="sections[${sidx}].description = this.value" />
+            </div>
+            <div>
+              <label class="block font-medium mb-1">Section Type</label>
+              <select class="w-full border border-gray-300 p-2 rounded" onchange="sections[${sidx}].type = this.value">
+                <option value="static" ${section.type === 'static' ? 'selected' : ''}>Static</option>
+                <option value="dynamic" ${section.type === 'dynamic' ? 'selected' : ''}>Dynamic</option>
+              </select>
+            </div>
           </div>
+          <div class="mb-4">
+            <button class="bg-gray-700 text-white px-3 py-1 rounded" onclick="addField(${sidx})">+ Add Field</button>
+          </div>
+          <div class="space-y-3">${renderFieldsHTML(sidx)}</div>
         `;
-        // Attach dropdown show/hide on field type change
-        setTimeout(() => {
-          const sel = card.querySelector('select');
-          sel.onchange = function() {
-            auraFields[idx].type = this.value;
-            renderAuraFields();
-          };
-        }, 0);
-        list.appendChild(card);
+        container.appendChild(sectionEl);
       });
     }
 
-    window.removeAuraField = function(idx) {
-      auraFields.splice(idx, 1);
-      renderAuraFields();
-    };
-
-    document.getElementById('add-aura-field').onclick = function() {
-      auraFields.push({ label: '', type: 'text' });
-      renderAuraFields();
-    };
-
-    // --- TERRA SECTIONS LOGIC ---
-    let terraSections = [];
-
-    function renderTerraSections() {
-      const list = document.getElementById('terra-sections-list');
-      list.innerHTML = '';
-      terraSections.forEach((s, sidx) => {
-        const card = document.createElement('div');
-        card.className = 'section-card';
-        card.innerHTML = `
-          <label>Section Name</label>
-          <input type="text" value="${s.name || ''}" onchange="terraSections[${sidx}].name = this.value">
-          <label>Section Type</label>
-          <input type="text" value="${s.type || ''}" onchange="terraSections[${sidx}].type = this.value">
-          <label>Undeletable</label>
-          <select onchange="terraSections[${sidx}].undeletable = (this.value === 'true')">
-            <option value="true" ${s.undeletable ? 'selected' : ''}>True</option>
-            <option value="false" ${!s.undeletable ? 'selected' : ''}>False</option>
-          </select>
-          <div class="fields-list" id="terra-fields-list-${sidx}"></div>
-          <button type="button" class="add-btn" onclick="addTerraField(${sidx})">+ Add Field</button>
-          <div class="section-actions">
-            <button type="button" class="delete-btn action-btn" onclick="removeTerraSection(${sidx})">Delete Section</button>
+    function renderFieldsHTML(sidx) {
+      return sections[sidx].fields.map((field, fidx) => `
+        <div class="p-3 border rounded bg-white">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium">Field Name</label>
+              <input type="text" class="w-full border border-gray-300 p-2 rounded" value="${field.name}" onchange="sections[${sidx}].fields[${fidx}].name = this.value" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Field Type</label>
+              <select class="w-full border border-gray-300 p-2 rounded" onchange="sections[${sidx}].fields[${fidx}].type = this.value">
+                <option value="text" ${field.type === 'text' ? 'selected' : ''}>Text</option>
+                <option value="number" ${field.type === 'number' ? 'selected' : ''}>Number</option>
+                <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Textarea</option>
+                <option value="dropdown" ${field.type === 'dropdown' ? 'selected' : ''}>Dropdown</option>
+                <option value="radio" ${field.type === 'radio' ? 'selected' : ''}>Radio</option>
+                <option value="checkbox" ${field.type === 'checkbox' ? 'selected' : ''}>Checkbox</option>
+                <option value="stars" ${field.type === 'stars' ? 'selected' : ''}>Stars</option>
+                <option value="photo" ${field.type === 'photo' ? 'selected' : ''}>Photo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Required?</label>
+              <select class="w-full border border-gray-300 p-2 rounded" onchange="sections[${sidx}].fields[${fidx}].required = (this.value === 'true')">
+                <option value="true" ${field.required ? 'selected' : ''}>Yes</option>
+                <option value="false" ${!field.required ? 'selected' : ''}>No</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Static?</label>
+              <select class="w-full border border-gray-300 p-2 rounded" onchange="sections[${sidx}].fields[${fidx}].static = (this.value === 'true')">
+                <option value="true" ${field.static ? 'selected' : ''}>Yes</option>
+                <option value="false" ${!field.static ? 'selected' : ''}>No</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-medium">Help Text</label>
+              <input type="text" class="w-full border border-gray-300 p-2 rounded" value="${field.help || ''}" onchange="sections[${sidx}].fields[${fidx}].help = this.value" />
+            </div>
           </div>
-        `;
-        list.appendChild(card);
-        renderTerraFields(sidx);
-      });
+        </div>
+      `).join('');
     }
 
-    function renderTerraFields(sidx) {
-      const section = terraSections[sidx];
-      const list = document.getElementById(`terra-fields-list-${sidx}`);
-      list.innerHTML = '';
-      section.fields.forEach((f, fidx) => {
-        const div = document.createElement('div');
-        div.className = 'field-card';
-        div.innerHTML = `
-          <label>Field Name</label>
-          <input type="text" value="${f.name || ''}" onchange="terraSections[${sidx}].fields[${fidx}].name = this.value">
-          <label>Type</label>
-          <input type="text" value="${f.type || ''}" onchange="terraSections[${sidx}].fields[${fidx}].type = this.value">
-          <label>Static</label>
-          <select onchange="terraSections[${sidx}].fields[${fidx}].static = (this.value === 'true')">
-            <option value="true" ${f.static ? 'selected' : ''}>True</option>
-            <option value="false" ${!f.static ? 'selected' : ''}>False</option>
-          </select>
-          <label>Required</label>
-          <select onchange="terraSections[${sidx}].fields[${fidx}].required = (this.value === 'true')">
-            <option value="true" ${f.required ? 'selected' : ''}>True</option>
-            <option value="false" ${!f.required ? 'selected' : ''}>False</option>
-          </select>
-          <div class="field-actions">
-            <button type="button" class="delete-btn action-btn" onclick="removeTerraField(${sidx},${fidx})">Delete Field</button>
-          </div>
-        `;
-        list.appendChild(div);
+    function addSection() {
+      sections.push({
+        name: '',
+        description: '',
+        type: 'static',
+        undeletable: true,
+        fields: []
       });
+      renderSections();
     }
 
-    window.addTerraField = function(sidx) {
-      terraSections[sidx].fields.push({ name: '', type: '', static: false, required: false });
-      renderTerraSections();
-    };
+    function removeSection(index) {
+      sections.splice(index, 1);
+      renderSections();
+    }
 
-    window.removeTerraField = function(sidx, fidx) {
-      terraSections[sidx].fields.splice(fidx, 1);
-      renderTerraSections();
-    };
+    function addField(sidx) {
+      sections[sidx].fields.push({
+        name: '',
+        type: 'text',
+        required: false,
+        static: false,
+        help: ''
+      });
+      renderSections();
+    }
 
-    window.removeTerraSection = function(sidx) {
-      terraSections.splice(sidx, 1);
-      renderTerraSections();
-    };
+    document.getElementById('add-section').addEventListener('click', addSection);
 
-    document.getElementById('add-terra-section').onclick = function() {
-      terraSections.push({ name: '', type: '', undeletable: false, fields: [] });
-      renderTerraSections();
-    };
-
-    // --- FORM SUBMISSION ---
-    document.getElementById('template-form').onsubmit = function(e) {
-      e.preventDefault();
-      document.getElementById('status').textContent = '';
+    document.getElementById('submit-template').addEventListener('click', () => {
       const label = document.getElementById('template-label').value.trim();
       const key = document.getElementById('template-key').value.trim();
+      const logScope = document.querySelector('input[name="log_scope"]:checked').value;
 
-      if (!label || !key) {
-        document.getElementById('status').textContent = 'Label and Key are required.';
+      if (!label || !key || sections.length === 0) {
+        document.getElementById('status').textContent = 'Please fill in all required fields and add at least one section.';
         return;
       }
 
-      if (mode === 'aura') {
-        if (auraFields.length === 0) {
-          document.getElementById('status').textContent = 'Add at least one field for Aura template.';
-          return;
-        }
-        // Validate aura fields
-        for (let i = 0; i < auraFields.length; i++) {
-          const f = auraFields[i];
-          if (!f.label || !f.type) {
-            document.getElementById('status').textContent = `Aura field #${i+1} is incomplete.`;
-            return;
-          }
-          if (f.type === 'dropdown' && (!f.options || !Array.isArray(f.options) || f.options.length === 0)) {
-            document.getElementById('status').textContent = `Aura field #${i+1} must have dropdown options.`;
-            return;
-          }
-        }
-        // Build Aura template object
-        const links = document.getElementById('aura-links').value.split(',').map(x => x.trim()).filter(Boolean);
-        const template = {
-          type: 'aura',
-          label,
-          key,
-          fields: auraFields.map(f => ({
-            label: f.label,
-            type: f.type,
-            ...(f.type === 'dropdown' ? { options: f.options } : {})
-          })),
-          ...(links.length > 0 ? { links } : {})
-        };
-        // Here you can POST or save the template object
-        document.getElementById('status').textContent = 'Aura template generated! (Not yet saved)';
-        console.log('Aura Template:', template);
-      } else {
-        if (terraSections.length === 0) {
-          document.getElementById('status').textContent = 'Add at least one section for Terra template.';
-          return;
-        }
-        for (let s = 0; s < terraSections.length; s++) {
-          const sec = terraSections[s];
-          if (!sec.name || !sec.type || typeof sec.undeletable !== 'boolean') {
-            document.getElementById('status').textContent = `Terra section #${s+1} is incomplete.`;
-            return;
-          }
-          if (!Array.isArray(sec.fields) || sec.fields.length === 0) {
-            document.getElementById('status').textContent = `Terra section #${s+1} must have at least one field.`;
-            return;
-          }
-          for (let f = 0; f < sec.fields.length; f++) {
-            const fld = sec.fields[f];
-            if (!fld.name || !fld.type || typeof fld.static !== 'boolean' || typeof fld.required !== 'boolean') {
-              document.getElementById('status').textContent = `Field #${f+1} in section #${s+1} is incomplete.`;
-              return;
-            }
-          }
-        }
-        const version = document.getElementById('terra-version').value.trim();
-        if (!version) {
-          document.getElementById('status').textContent = 'Version is required for Terra template.';
-          return;
-        }
-        // Build Terra template object
-        const template = {
-          type: 'terra',
-          label,
-          key,
-          version,
-          sections: terraSections.map(sec => ({
-            name: sec.name,
-            type: sec.type,
-            undeletable: sec.undeletable,
-            fields: sec.fields.map(fld => ({
-              name: fld.name,
-              type: fld.type,
-              static: fld.static,
-              required: fld.required
-            }))
-          }))
-        };
-        // Here you can POST or save the template object
-        document.getElementById('status').textContent = 'Terra template generated! (Not yet saved)';
-        console.log('Terra Template:', template);
-      }
-    };
+      const template = {
+        key,
+        label,
+        log_scope: logScope,
+        version: 1,
+        sections
+      };
 
-    // --- Initialize ---
-    setMode('aura');
-    renderAuraFields();
-    renderTerraSections();
+      console.log('Generated Template:', template);
+      document.getElementById('status').textContent = 'Template generated in console (not saved yet).';
+    });
+
+    renderSections();
   </script>
 </body>
 </html>
