@@ -3,59 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tether</title>
+  <title>Tether Display</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-    .fade-in {
-      animation: fadeIn 0.5s ease-in-out;
-    }
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.6s ease-in-out; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    .modal-bg { background-color: rgba(0, 0, 0, 0.6); }
   </style>
 </head>
-<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen flex items-center justify-center p-6">
-  <div id="app" class="fade-in max-w-xl w-full text-center">
-    <h1 class="text-4xl font-bold mb-4 text-indigo-400">Welcome to Tether</h1>
-    <p class="mb-6 text-lg text-gray-300">Every object has a story. <span class="italic text-white">Tether to it.</span></p>
-    <p class="mb-8 text-sm text-gray-400">Use your QR code or NFC tag to load the right Tether.<br>Or enter an ID manually to begin.</p>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
+  <div id="app" class="max-w-3xl mx-auto fade-in"></div>
 
-    <div class="flex items-center justify-center gap-2 max-w-md mx-auto">
-      <input id="idInput" type="text" placeholder="Enter Tether ID (e.g. abc123)"
-        class="w-full px-4 py-2 rounded bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-      <button onclick="goToDisplay()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-white">Go</button>
+  <!-- Confirmation Modal -->
+  <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-bg">
+    <div class="bg-slate-700 text-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+      <p id="modal-text" class="mb-4"></p>
+      <button onclick="hideModal()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">OK</button>
     </div>
+  </div>
 
-    <p id="error" class="text-red-400 mt-4 hidden">Please enter a valid ID.</p>
+  <div class="fixed bottom-2 right-4 text-xs text-gray-500">
+    Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
 
   <script>
-    // Redirect if ID is already in the URL
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
-    if (id) {
-      window.location.href = `display.html?id=${id}`;
-    }
-
-    // Go button and Enter key support
-    function goToDisplay() {
-      const input = document.getElementById("idInput");
-      const id = input.value.trim();
-      if (id) {
-        window.location.href = `display.html?id=${id}`;
-      } else {
-        document.getElementById("error").classList.remove("hidden");
-      }
-    }
-
-    document.getElementById("idInput").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") goToDisplay();
-    });
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+    firebase.initializeApp(firebaseConfig);
   </script>
+
+  <script src="display-logic.js"></script>
 </body>
 </html>
