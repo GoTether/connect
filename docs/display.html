@@ -3,176 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tether Display</title>
+  <title>Tether</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .fade-in { animation: fadeIn 0.6s ease-in-out; }
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
-  <div id="app" class="max-w-3xl mx-auto fade-in"></div>
-  <div class="fixed bottom-2 right-4 text-xs text-gray-500">
-    Build: <script>document.write(new Date().toLocaleString())</script>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen flex items-center justify-center p-6">
+  <div id="app" class="fade-in max-w-xl w-full text-center">
+    <h1 class="text-4xl font-bold mb-4 text-indigo-400">Welcome to Tether</h1>
+    <p class="mb-6 text-lg text-gray-300">Every object has a story. <span class="italic text-white">Tether to it.</span></p>
+    <p class="mb-8 text-sm text-gray-400">Use your QR code or NFC tag to load the right Tether.<br>Or enter an ID manually to begin.</p>
+
+    <div class="flex items-center justify-center gap-2 max-w-md mx-auto">
+      <input id="idInput" type="text" placeholder="Enter Tether ID (e.g. abc123)"
+        class="w-full px-4 py-2 rounded bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      <button onclick="goToDisplay()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-white">Go</button>
+    </div>
+
+    <p id="error" class="text-red-400 mt-4 hidden">Please enter a valid ID.</p>
   </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
-      authDomain: "tether-71e0c.firebaseapp.com",
-      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
-      projectId: "tether-71e0c",
-      storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-    const app = document.getElementById('app');
+    // Redirect if ID is already in the URL
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
-    let uid = null;
-
-    function landingPage() {
-      app.innerHTML = `
-        <div class="text-center mt-20">
-          <h1 class="text-4xl font-bold mb-4">Welcome to Tether</h1>
-          <p class="text-lg text-gray-300 mb-6">Scan a Tether QR code or enter an ID to begin logging your experience.</p>
-          <input id="manual-id" type="text" placeholder="Enter Tether ID" class="px-4 py-2 rounded w-60 text-black">
-          <button onclick="goToTether()" class="ml-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded">Go</button>
-        </div>
-      `;
+    if (id) {
+      window.location.href = `display.html?id=${id}`;
     }
 
-    function goToTether() {
-      const newId = document.getElementById('manual-id').value.trim();
-      if (newId) window.location.href = `display.html?id=${newId}`;
-    }
-
-    async function loadTether() {
-      const snap = await db.ref('tethers/' + id).get();
-      if (!snap.exists()) return showTemplatePicker();
-      const tether = snap.val();
-      const templateSnap = await db.ref('global_templates/' + tether.template_id).get();
-      if (!templateSnap.exists()) return error("Template not found.");
-      const template = templateSnap.val();
-      const logPath = template.log_scope === "terra"
-        ? `shared_logs/${id}/entries`
-        : `users/${uid}/logs/${tether.template_id}/entries`;
-
-      renderTether(template, tether, logPath);
-    }
-
-    function showTemplatePicker() {
-      db.ref('global_templates').get().then(snapshot => {
-        const templates = snapshot.val();
-        const options = Object.entries(templates).map(([key, val]) =>
-          `<option value="${key}">${val.name} (${val.log_scope})</option>`).join('');
-        app.innerHTML = `
-          <div class="text-center mt-20">
-            <h2 class="text-2xl font-semibold mb-2">Assign a Template</h2>
-            <select id="template-choice" class="px-4 py-2 rounded text-black">${options}</select><br><br>
-            <button onclick="assignTemplate()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Assign</button>
-          </div>`;
-      });
-    }
-
-    function assignTemplate() {
-      const selected = document.getElementById('template-choice').value;
-      db.ref('tethers/' + id).set({ template_id: selected }).then(() => {
-        window.location.reload();
-      });
-    }
-
-    function renderTether(template, tether, logPath) {
-      app.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-2xl font-semibold mb-2">${template.name}</h2>
-          <div class="text-sm text-gray-400 mb-4">Tether ID: ${id}</div>
-          <div id="static-fields" class="mb-6"></div>
-          <form id="log-form" class="space-y-4 mb-6"></form>
-          <div id="entries"></div>
-        </div>
-      `;
-      db.ref(`tethers/${id}/static`).get().then(snap => {
-        const values = snap.val() || {};
-        const staticHTML = template.static_fields.map(f => `
-          <div><strong class="text-gray-300">${f.name}:</strong> ${values[f.name] || "—"}</div>
-        `).join('');
-        document.getElementById('static-fields').innerHTML = staticHTML;
-      });
-
-      const form = document.getElementById('log-form');
-      template.dynamic_fields.forEach(field => {
-        const name = field.name;
-        if (field.type === "text" || field.type === "number")
-          form.innerHTML += `<div><label>${name}</label><input type="${field.type}" name="${name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"></div>`;
-        else if (field.type === "textarea")
-          form.innerHTML += `<div><label>${name}</label><textarea name="${name}" rows="3" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"></textarea></div>`;
-      });
-      form.innerHTML += `<button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Submit</button>`;
-
-      form.onsubmit = async e => {
-        e.preventDefault();
-        const entry = { _timestamp: new Date().toISOString() };
-        template.dynamic_fields.forEach(field => {
-          const el = form.querySelector(`[name="${field.name}"]`);
-          entry[field.name] = el.value;
-        });
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(async pos => {
-            entry._geo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            await db.ref(logPath).push(entry);
-            form.reset();
-            renderEntries(logPath, template);
-          }, async () => {
-            await db.ref(logPath).push(entry);
-            form.reset();
-            renderEntries(logPath, template);
-          });
-        } else {
-          await db.ref(logPath).push(entry);
-          form.reset();
-          renderEntries(logPath, template);
-        }
-      };
-
-      renderEntries(logPath, template);
-    }
-
-    async function renderEntries(logPath, template) {
-      const snap = await db.ref(logPath).get();
-      if (!snap.exists()) return document.getElementById('entries').innerHTML = "<p class='text-gray-400'>No entries yet.</p>";
-      const entries = Object.values(snap.val()).reverse();
-      document.getElementById('entries').innerHTML = entries.map(e => `
-        <div class="bg-slate-800 p-4 rounded-lg mb-3 shadow">
-          ${template.dynamic_fields.map(f => `<div><span class="text-gray-400">${f.name}:</span> ${e[f.name] || "—"}</div>`).join('')}
-          <div class="text-xs text-gray-500 mt-2">🕒 ${new Date(e._timestamp).toLocaleString()}</div>
-        </div>
-      `).join('');
-    }
-
-    function error(msg) {
-      app.innerHTML = `<div class="text-red-400 text-center mt-20">${msg}</div>`;
-    }
-
-    auth.onAuthStateChanged(user => {
-      if (!id) return landingPage();
-      if (!user) auth.signInAnonymously();
-      else {
-        uid = user.uid;
-        loadTether();
+    // Go button and Enter key support
+    function goToDisplay() {
+      const input = document.getElementById("idInput");
+      const id = input.value.trim();
+      if (id) {
+        window.location.href = `display.html?id=${id}`;
+      } else {
+        document.getElementById("error").classList.remove("hidden");
       }
+    }
+
+    document.getElementById("idInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") goToDisplay();
     });
   </script>
 </body>
