@@ -1,225 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Template Manager</title>
-  <style>
-    /* Basic styles for layout and clarity */
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
-    .container { max-width: 900px; margin: 2em auto; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px #ddd; padding: 2em; }
-    h1 { margin-top: 0; }
-    .type-switch { display: flex; gap: 1em; margin-bottom: 2em; }
-    .type-btn {
-      border: none; background: #eee; color: #333;
-      padding: 0.6em 2em; border-radius: 3px;
-      font-size: 1.1em; cursor: pointer; font-weight: bold;
-      transition: background .2s;
-    }
-    .type-btn.active { background: #44c678; color: #fff; }
-    .search-bar { margin-bottom: 1em; width: 100%; padding: 0.5em; font-size: 1.05em; }
-    .upload-section { margin-bottom: 2em; }
-    .template-list { margin-bottom: 2em; }
-    .template-card { padding: 1em; background: #fafafa; border: 1px solid #eee; border-radius: 4px; margin-bottom: 1em; }
-    .template-label { font-weight: bold; font-size: 1.2em; }
-    .template-key { font-size: 0.98em; color: #888; }
-    .actions { margin-top: 0.5em; display: flex; gap: 8px; }
-    .action-btn, .delete-btn {
-      background: #eee; border: none; padding: 0.3em 1.2em; border-radius: 2px;
-      cursor: pointer; transition: background .2s; font-weight: bold;
-    }
-    .action-btn:hover { background: #d2f0e0; }
-    .delete-btn { background: #e44; color: #fff; }
-    .delete-btn:hover { background: #b22; }
-    .status { color: #c44; font-size: 0.98em; margin-top: 0.3em; }
-    .back-btn { display: inline-block; margin-bottom: 1.4em; padding: 0.6em 2em; background: #eee; color: #333;
-      border: none; border-radius: 4px; font-size: 1.08em; font-weight: bold; text-decoration: none; cursor: pointer; transition: background .2s;}
-    .back-btn:hover { background: #44c678; color: #fff; }
-  </style>
-  <!-- Firebase scripts (compat version for simplicity, can be upgraded later) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-</head>
-<body>
-  <div class="container">
-    <a href="/admin" class="back-btn">← Back to Admin</a>
-    <h1>Template Manager</h1>
-    <div class="type-switch">
-      <button id="terra-btn" class="type-btn active">Terra</button>
-      <button id="aura-btn" class="type-btn">Aura</button>
-    </div>
-    <input id="search-bar" class="search-bar" placeholder="Search templates..." />
-    <div class="upload-section">
-      <input type="file" id="upload-input" accept=".json">
-      <button id="upload-btn" class="action-btn">Bulk Upload</button>
-      <span id="status" class="status"></span>
-    </div>
-    <div id="template-list" class="template-list"></div>
-  </div>
-  <script>
-    // === 1. Firebase Initialization ===
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref as dbRef, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID"
-      // ... other config
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
 
-    // === 2. Basic State & Utilities ===
-    let templates = { terra: [], aura: [] };
-    let activeType = "terra";
-    let renameMode = {};
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    // === 3. Fetch Templates ===
-    async function fetchTemplates(type) {
+    const templatesContainer = document.getElementById('templates-list');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const statusDiv = document.getElementById('status');
+
+    // Fetch and display templates on page load
+    async function loadTemplates() {
+      loadingIndicator.classList.remove('hidden');
+      statusDiv.textContent = '';
+      templatesContainer.innerHTML = '';
       try {
-        const snap = await db.collection('templates').where('type', '==', type).get();
-        templates[type] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      } catch (e) {
-        templates[type] = [];
-        document.getElementById("status").textContent = `Error: ${e.message}`;
-      }
-      renderTemplates();
-    }
-
-    // === 4. Render Template List ===
-    function renderTemplates() {
-      const search = document.getElementById("search-bar").value.trim().toLowerCase();
-      const list = document.getElementById("template-list");
-      list.innerHTML = "";
-      const filtered = templates[activeType].filter(t =>
-        (!search) ||
-        (t.label && t.label.toLowerCase().includes(search)) ||
-        (t.key && t.key.toLowerCase().includes(search))
-      );
-      if (filtered.length === 0) {
-        list.innerHTML = `<div style="color:#888;font-style:italic;">No templates found.</div>`;
-        return;
-      }
-      filtered.forEach(t => {
-        let card = document.createElement("div");
-        card.className = "template-card";
-        if (renameMode[t.id]) {
-          card.innerHTML = `
-            <span class="template-label">${t.label}</span>
-            <div class="template-key">${t.key}</div>
-            <input type="text" id="ren-input-${t.id}" value="${t.label}" style="margin-top:8px;">
-            <div class="actions">
-              <button class="action-btn" id="save-${t.id}">Save</button>
-              <button class="action-btn" id="cancel-${t.id}">Cancel</button>
+        const snapshot = await get(dbRef(db, 'global_templates'));
+        loadingIndicator.classList.add('hidden');
+        if (!snapshot.exists()) {
+          templatesContainer.innerHTML = `
+            <div class="col-span-full text-gray-500 text-center py-16">
+              <svg class="mx-auto mb-4 w-12 h-12 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" stroke-dasharray="4 2"></circle></svg>
+              No templates found.
             </div>
           `;
-          card.querySelector(`#save-${t.id}`).onclick = async function() {
-            const val = card.querySelector(`#ren-input-${t.id}`).value.trim();
-            if (val && val !== t.label) {
-              await db.collection('templates').doc(t.id).update({ label: val });
-            }
-            renameMode[t.id] = false;
-            await fetchTemplates(activeType);
-          };
-          card.querySelector(`#cancel-${t.id}`).onclick = function() {
-            renameMode[t.id] = false;
-            renderTemplates();
-          };
-        } else {
-          card.innerHTML = `
-            <span class="template-label">${t.label}</span>
-            <div class="template-key">${t.key}</div>
-            <div class="actions">
-              <button class="action-btn" id="rename-${t.id}">Rename</button>
-              <button class="delete-btn action-btn" id="delete-${t.id}">Delete</button>
-            </div>
-          `;
-          card.querySelector(`#rename-${t.id}`).onclick = function() {
-            renameMode[t.id] = true;
-            renderTemplates();
-          };
-          card.querySelector(`#delete-${t.id}`).onclick = async function() {
-            if (confirm(`Delete template "${t.label}"?`)) {
-              await db.collection('templates').doc(t.id).delete();
-              await fetchTemplates(activeType);
-            }
-          };
-        }
-        list.appendChild(card);
-      });
-    }
-
-    // === 5. Hook Up Controls ===
-    document.getElementById("terra-btn").onclick = async function() {
-      activeType = "terra";
-      document.getElementById("terra-btn").classList.add("active");
-      document.getElementById("aura-btn").classList.remove("active");
-      await fetchTemplates("terra");
-    };
-    document.getElementById("aura-btn").onclick = async function() {
-      activeType = "aura";
-      document.getElementById("aura-btn").classList.add("active");
-      document.getElementById("terra-btn").classList.remove("active");
-      await fetchTemplates("aura");
-    };
-    document.getElementById("search-bar").oninput = renderTemplates;
-
-    // === 6. Bulk Upload Logic (Validates Structure) ===
-    document.getElementById("upload-btn").onclick = async function() {
-      const input = document.getElementById("upload-input");
-      document.getElementById("status").textContent = "";
-      if (!input.files[0]) {
-        document.getElementById("status").textContent = "Select a .json file.";
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        let data;
-        try { data = JSON.parse(e.target.result); }
-        catch (err) {
-          document.getElementById("status").textContent = `JSON error: ${err.message}`;
           return;
         }
-        let toImport = Array.isArray(data) ? data : [data];
-        let errors = [], imported = [];
-        toImport.forEach((tpl, idx) => {
-          if (activeType === "terra") {
-            if (!tpl || typeof tpl !== "object" || !tpl.key || !tpl.label || !Array.isArray(tpl.sections) || !tpl.version) {
-              errors.push(`Template #${idx+1}: Invalid Terra structure.`);
-              return;
-            }
-            tpl.type = "terra";
-            imported.push(tpl);
-          } else {
-            if (!tpl || typeof tpl !== "object" || !tpl.key || !tpl.label || !Array.isArray(tpl.fields)) {
-              errors.push(`Template #${idx+1}: Invalid Aura structure.`);
-              return;
-            }
-            tpl.type = "aura";
-            imported.push(tpl);
-          }
+        const templates = snapshot.val();
+        let html = '';
+        Object.entries(templates).forEach(([key, template]) => {
+          html += `
+            <div class="bg-white border border-gray-200 rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col p-6 relative">
+              <div class="flex items-center mb-3 gap-2">
+                <span class="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">${template.scope ? template.scope.toUpperCase() : 'N/A'}</span>
+                <h2 class="text-lg font-bold truncate" title="${template.label || 'Untitled'}">${template.label || 'Untitled'}</h2>
+              </div>
+              <div class="mb-2 text-gray-700 flex-1">
+                <span class="font-medium">Sections:</span>
+                ${template.sections ? Object.keys(template.sections).length : 0}
+              </div>
+              <div class="text-gray-500 text-sm mb-4 truncate">
+                <span class="font-medium">Key:</span> ${key}
+              </div>
+              <div class="flex gap-3 mt-auto pt-2">
+                <!-- Placeholder for future actions -->
+                <button class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 font-semibold transition">View</button>
+                <!-- Add more buttons here for Edit/Delete in the future -->
+              </div>
+            </div>
+          `;
         });
-        if (errors.length) {
-          document.getElementById("status").textContent = errors.join(" | ");
-          return;
-        }
-        try {
-          const batch = db.batch();
-          imported.forEach(tpl => {
-            const ref = db.collection('templates').doc();
-            batch.set(ref, tpl);
-          });
-          await batch.commit();
-          document.getElementById("status").textContent = "Templates imported!";
-          await fetchTemplates(activeType);
-        } catch (err) {
-          document.getElementById("status").textContent = "Upload failed: " + err.message;
-        }
-      };
-      reader.readAsText(input.files[0]);
-    };
+        templatesContainer.innerHTML = html;
+      } catch (err) {
+        loadingIndicator.classList.add('hidden');
+        statusDiv.textContent = "❌ Error loading templates: " + err.message;
+      }
+    }
 
-    // === 7. Initial Load ===
-    window.onload = async function() {
-      await fetchTemplates("terra");
-    };
+    // Run on page load
+    loadTemplates();
   </script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col">
+  <div class="w-full text-center py-2 bg-gray-200 text-sm">
+    <a href="/docs/admin.html" class="text-blue-600 hover:underline">&larr; Back to Admin Dashboard</a>
+  </div>
+  <main class="flex-1 max-w-6xl mx-auto p-6 bg-white rounded-xl shadow-md mt-6 mb-8 flex flex-col">
+    <h1 class="text-3xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">Template Manager</h1>
+    <div id="status" class="text-red-600 mb-4"></div>
+    <div id="loading-indicator" class="mb-8 flex justify-center">
+      <svg class="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      <span class="ml-2 text-blue-600 font-medium">Loading templates...</span>
+    </div>
+    <div id="templates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+    <div class="mt-10 text-center">
+      <a href="/docs/templatecreator.html" class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition">+ Create New Template</a>
+    </div>
+  </main>
+  <footer class="w-full text-center py-4 bg-gray-100 text-sm border-t">
+    <a href="/docs/admin.html" class="text-blue-600 hover:underline">&larr; Back to Admin Dashboard</a>
+  </footer>
 </body>
 </html>
