@@ -37,7 +37,7 @@
         loadingIndicator.classList.add('hidden');
         if (!snapshot.exists()) {
           templatesContainer.innerHTML = `
-            <div class="col-span-full text-gray-500 text-center py-16">
+            <div class="text-gray-500 text-center py-16">
               <svg class="mx-auto mb-4 w-12 h-12 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" stroke-dasharray="4 2"></circle></svg>
               No templates found.
             </div>
@@ -46,24 +46,26 @@
         }
         const templates = snapshot.val();
         let html = '';
-        Object.entries(templates).forEach(([key, template]) => {
+        Object.values(templates).forEach(template => {
+          let scope = '';
+          if (template.scope === 'aura') {
+            scope = 'Aura';
+          } else if (template.scope === 'terra') {
+            scope = 'Terra';
+          }
+
           html += `
-            <div class="bg-white border border-gray-200 rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col p-6 relative">
+            <div class="bg-white border border-gray-200 rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col p-6">
               <div class="flex items-center mb-3 gap-2">
-                <span class="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">${template.scope ? template.scope.toUpperCase() : 'N/A'}</span>
+                ${scope ? `<span class="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">${scope}</span>` : ''}
                 <h2 class="text-lg font-bold truncate" title="${template.label || 'Untitled'}">${template.label || 'Untitled'}</h2>
               </div>
               <div class="mb-2 text-gray-700 flex-1">
                 <span class="font-medium">Sections:</span>
                 ${template.sections ? Object.keys(template.sections).length : 0}
               </div>
-              <div class="text-gray-500 text-sm mb-4 truncate">
-                <span class="font-medium">Key:</span> ${key}
-              </div>
               <div class="flex gap-3 mt-auto pt-2">
-                <!-- Placeholder for future actions -->
                 <button class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 font-semibold transition">View</button>
-                <!-- Add more buttons here for Edit/Delete in the future -->
               </div>
             </div>
           `;
@@ -83,7 +85,7 @@
   <div class="w-full text-center py-2 bg-gray-200 text-sm">
     <a href="/docs/admin.html" class="text-blue-600 hover:underline">&larr; Back to Admin Dashboard</a>
   </div>
-  <main class="flex-1 max-w-6xl mx-auto p-6 bg-white rounded-xl shadow-md mt-6 mb-8 flex flex-col">
+  <main class="flex-1 max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md mt-6 mb-8 flex flex-col">
     <h1 class="text-3xl font-extrabold mb-8 text-gray-900 text-center tracking-tight">Template Manager</h1>
     <div id="status" class="text-red-600 mb-4"></div>
     <div id="loading-indicator" class="mb-8 flex justify-center">
@@ -93,7 +95,7 @@
       </svg>
       <span class="ml-2 text-blue-600 font-medium">Loading templates...</span>
     </div>
-    <div id="templates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+    <div id="templates-list" class="flex flex-col gap-6"></div>
     <div class="mt-10 text-center">
       <a href="/docs/templatecreator.html" class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition">+ Create New Template</a>
     </div>
