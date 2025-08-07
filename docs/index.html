@@ -4,35 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tether Gateway</title>
+
+  <!-- Tailwind CDN (for dev only; fine for now) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="./assets/firebase-init.js"></script>
-  <script type="module">
-    import { ref, get, getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { database } from './assets/firebase-init.js';
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get('id');
-      const statusEl = document.getElementById('status-text');
+  <!-- Firebase (CDN version for GitHub Pages) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
 
-      if (!id) {
-        statusEl.innerText = "No Tether ID provided.";
-        return;
-      }
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
 
-      statusEl.innerText = "Checking Tether...";
-
-      try {
-        const snapshot = await get(ref(database, 'tethers/' + id));
-        setTimeout(() => {
-          window.location.href = `display.html?id=${id}`;
-        }, 1000); // delay for UX polish
-      } catch (err) {
-        statusEl.innerText = "Error checking Tether. Please try again.";
-        console.error(err);
-      }
-    });
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
   </script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
     body {
@@ -40,6 +36,7 @@
     }
   </style>
 </head>
+
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white flex items-center justify-center h-screen relative">
 
   <div class="text-center animate-fade-in">
@@ -55,7 +52,32 @@
   </div>
 
   <script>
-    // Debug reveal (press /)
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      const statusEl = document.getElementById('status-text');
+
+      if (!id) {
+        statusEl.innerText = "No Tether ID provided.";
+        return;
+      }
+
+      statusEl.innerText = "Checking Tether...";
+
+      firebase.database().ref('tethers/' + id).get()
+        .then((snapshot) => {
+          // Even if not found, still redirect — display.html will handle it
+          setTimeout(() => {
+            window.location.href = `display.html?id=${id}`;
+          }, 1000);
+        })
+        .catch((error) => {
+          console.error(error);
+          statusEl.innerText = "Error checking Tether.";
+        });
+    });
+
+    // Press "/" to reveal the Tether ID (for debugging)
     document.addEventListener('keydown', (e) => {
       if (e.key === '/') {
         const id = new URLSearchParams(window.location.search).get('id');
