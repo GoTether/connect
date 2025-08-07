@@ -3,35 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tether Log</title>
-
-  <!-- Tailwind CSS -->
+  <title>Tether Display</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.6s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
-
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white min-h-screen p-6">
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-4">Tether Log</h1>
-    <p id="status-text" class="text-center text-gray-400 mb-6">Loading...</p>
-
-    <div id="static-fields" class="mb-8"></div>
-    <form id="log-form" class="mb-8"></form>
-    <div id="entries"></div>
-  </div>
-
-  <!-- Timestamp -->
+  <div id="app" class="max-w-3xl mx-auto fade-in"></div>
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
@@ -47,147 +35,145 @@
       appId: "1:277809008742:web:2586a2b821d8da8f969da7",
       measurementId: "G-X7ZQ6DJYEN"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
-
+    const app = document.getElementById('app');
     const params = new URLSearchParams(window.location.search);
-    const tetherId = params.get('id');
-    const statusEl = document.getElementById('status-text');
-    const staticContainer = document.getElementById('static-fields');
-    const logForm = document.getElementById('log-form');
-    const entriesContainer = document.getElementById('entries');
-
+    const id = params.get('id');
     let uid = null;
-    let template = null;
-    let logPath = null;
-    let staticPath = null;
 
-    if (!tetherId) {
-      statusEl.innerText = "No Tether ID in URL.";
+    function landingPage() {
+      app.innerHTML = `
+        <div class="text-center mt-20">
+          <h1 class="text-4xl font-bold mb-4">Welcome to Tether</h1>
+          <p class="text-lg text-gray-300 mb-6">Scan a Tether QR code or enter an ID to begin logging your experience.</p>
+          <input id="manual-id" type="text" placeholder="Enter Tether ID" class="px-4 py-2 rounded w-60 text-black">
+          <button onclick="goToTether()" class="ml-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded">Go</button>
+        </div>
+      `;
     }
 
-    auth.onAuthStateChanged(async user => {
-      if (!user) await auth.signInAnonymously();
-      uid = auth.currentUser.uid;
-      loadTether();
-    });
+    function goToTether() {
+      const newId = document.getElementById('manual-id').value.trim();
+      if (newId) window.location.href = `display.html?id=${newId}`;
+    }
 
     async function loadTether() {
-      const tetherSnap = await db.ref(`tethers/${tetherId}`).get();
-      if (!tetherSnap.exists()) return statusEl.innerText = "Tether not found.";
-      const tether = tetherSnap.val();
-      staticPath = `tethers/${tetherId}/static`;
-
-      const templateSnap = await db.ref(`global_templates/${tether.template_id}`).get();
-      if (!templateSnap.exists()) return statusEl.innerText = "Template not found.";
-      template = templateSnap.val();
-
-      logPath = template.log_scope === "terra"
-        ? `shared_logs/${tetherId}/entries`
+      const snap = await db.ref('tethers/' + id).get();
+      if (!snap.exists()) return showTemplatePicker();
+      const tether = snap.val();
+      const templateSnap = await db.ref('global_templates/' + tether.template_id).get();
+      if (!templateSnap.exists()) return error("Template not found.");
+      const template = templateSnap.val();
+      const logPath = template.log_scope === "terra"
+        ? `shared_logs/${id}/entries`
         : `users/${uid}/logs/${tether.template_id}/entries`;
 
-      renderStaticFields();
-      renderLogForm();
-      renderEntries();
+      renderTether(template, tether, logPath);
     }
 
-    async function renderStaticFields() {
-      const snap = await db.ref(staticPath).get();
-      const values = snap.exists() ? snap.val() : {};
-
-      staticContainer.innerHTML = `<h2 class="text-xl font-semibold mb-2">Info</h2>` +
-        template.static_fields.map(field => {
-          const val = values[field.name] || "—";
-          return `<div class="mb-2">
-            <div class="text-gray-400 text-sm">${field.name}</div>
-            <div class="text-white font-medium">${val}</div>
+    function showTemplatePicker() {
+      db.ref('global_templates').get().then(snapshot => {
+        const templates = snapshot.val();
+        const options = Object.entries(templates).map(([key, val]) =>
+          `<option value="${key}">${val.name} (${val.log_scope})</option>`).join('');
+        app.innerHTML = `
+          <div class="text-center mt-20">
+            <h2 class="text-2xl font-semibold mb-2">Assign a Template</h2>
+            <select id="template-choice" class="px-4 py-2 rounded text-black">${options}</select><br><br>
+            <button onclick="assignTemplate()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Assign</button>
           </div>`;
-        }).join('');
+      });
     }
 
-    function renderLogForm() {
-      logForm.innerHTML = `<h2 class="text-xl font-semibold mb-4">New Entry</h2>` +
-        template.dynamic_fields.map(field => {
-          const name = field.name;
-          const label = `<label class="block mb-1 text-gray-300">${name}</label>`;
-          const classes = "w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600";
-          if (field.type === "text" || field.type === "number")
-            return `<div class="mb-4">${label}<input type="${field.type}" name="${name}" class="${classes}"></div>`;
-          if (field.type === "textarea")
-            return `<div class="mb-4">${label}<textarea name="${name}" rows="3" class="${classes}"></textarea></div>`;
-          if (field.type === "dropdown")
-            return `<div class="mb-4">${label}<select name="${name}" class="${classes}">` +
-              field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('') + `</select></div>`;
-          if (field.type === "radio")
-            return `<div class="mb-4">${label}` +
-              field.options.map(opt =>
-                `<label class="inline-flex items-center mr-4 text-gray-200">
-                  <input type="radio" name="${name}" value="${opt}" class="mr-1">${opt}
-                </label>`).join('') + `</div>`;
-          if (field.type === "checkbox")
-            return `<div class="mb-4"><label class="inline-flex items-center text-gray-200">
-              <input type="checkbox" name="${name}" class="mr-2">${name}
-            </label></div>`;
-        }).join('') +
-        `<button class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" id="submit-log">Submit</button>`;
+    function assignTemplate() {
+      const selected = document.getElementById('template-choice').value;
+      db.ref('tethers/' + id).set({ template_id: selected }).then(() => {
+        window.location.reload();
+      });
+    }
 
-      document.getElementById("submit-log").onclick = async (e) => {
+    function renderTether(template, tether, logPath) {
+      app.innerHTML = `
+        <div class="mb-6">
+          <h2 class="text-2xl font-semibold mb-2">${template.name}</h2>
+          <div class="text-sm text-gray-400 mb-4">Tether ID: ${id}</div>
+          <div id="static-fields" class="mb-6"></div>
+          <form id="log-form" class="space-y-4 mb-6"></form>
+          <div id="entries"></div>
+        </div>
+      `;
+      db.ref(`tethers/${id}/static`).get().then(snap => {
+        const values = snap.val() || {};
+        const staticHTML = template.static_fields.map(f => `
+          <div><strong class="text-gray-300">${f.name}:</strong> ${values[f.name] || "—"}</div>
+        `).join('');
+        document.getElementById('static-fields').innerHTML = staticHTML;
+      });
+
+      const form = document.getElementById('log-form');
+      template.dynamic_fields.forEach(field => {
+        const name = field.name;
+        if (field.type === "text" || field.type === "number")
+          form.innerHTML += `<div><label>${name}</label><input type="${field.type}" name="${name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"></div>`;
+        else if (field.type === "textarea")
+          form.innerHTML += `<div><label>${name}</label><textarea name="${name}" rows="3" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"></textarea></div>`;
+      });
+      form.innerHTML += `<button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Submit</button>`;
+
+      form.onsubmit = async e => {
         e.preventDefault();
         const entry = { _timestamp: new Date().toISOString() };
-        for (const field of template.dynamic_fields) {
-          const el = logForm.querySelector(`[name="${field.name}"]`);
-          if (!el) continue;
-          if (field.type === "checkbox") {
-            entry[field.name] = el.checked;
-          } else if (field.type === "radio") {
-            const selected = logForm.querySelector(`[name="${field.name}"]:checked`);
-            if (selected) entry[field.name] = selected.value;
-          } else {
-            entry[field.name] = el.value;
-          }
-        }
-
+        template.dynamic_fields.forEach(field => {
+          const el = form.querySelector(`[name="${field.name}"]`);
+          entry[field.name] = el.value;
+        });
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async pos => {
-            entry._geo = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              accuracy: pos.coords.accuracy
-            };
+            entry._geo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             await db.ref(logPath).push(entry);
-            logForm.reset();
-            renderEntries();
+            form.reset();
+            renderEntries(logPath, template);
           }, async () => {
             await db.ref(logPath).push(entry);
-            logForm.reset();
-            renderEntries();
+            form.reset();
+            renderEntries(logPath, template);
           });
         } else {
           await db.ref(logPath).push(entry);
-          logForm.reset();
-          renderEntries();
+          form.reset();
+          renderEntries(logPath, template);
         }
       };
+
+      renderEntries(logPath, template);
     }
 
-    async function renderEntries() {
+    async function renderEntries(logPath, template) {
       const snap = await db.ref(logPath).get();
-      if (!snap.exists()) return entriesContainer.innerHTML = "<p class='text-gray-400'>No entries yet.</p>";
-
+      if (!snap.exists()) return document.getElementById('entries').innerHTML = "<p class='text-gray-400'>No entries yet.</p>";
       const entries = Object.values(snap.val()).reverse();
-      entriesContainer.innerHTML = `<h2 class="text-xl font-semibold mb-2 mt-6">Log History</h2>` +
-        entries.map(entry => `
-          <div class="bg-slate-800 p-4 rounded-lg mb-3 shadow">
-            ${template.dynamic_fields.map(field => {
-              const val = entry[field.name] ?? "—";
-              return `<div class="text-sm"><span class="text-gray-400">${field.name}:</span> ${val}</div>`;
-            }).join('')}
-            <div class="text-xs text-gray-500 mt-2">🕒 ${new Date(entry._timestamp).toLocaleString()}</div>
-          </div>
-        `).join('');
+      document.getElementById('entries').innerHTML = entries.map(e => `
+        <div class="bg-slate-800 p-4 rounded-lg mb-3 shadow">
+          ${template.dynamic_fields.map(f => `<div><span class="text-gray-400">${f.name}:</span> ${e[f.name] || "—"}</div>`).join('')}
+          <div class="text-xs text-gray-500 mt-2">🕒 ${new Date(e._timestamp).toLocaleString()}</div>
+        </div>
+      `).join('');
     }
+
+    function error(msg) {
+      app.innerHTML = `<div class="text-red-400 text-center mt-20">${msg}</div>`;
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (!id) return landingPage();
+      if (!user) auth.signInAnonymously();
+      else {
+        uid = user.uid;
+        loadTether();
+      }
+    });
   </script>
 </body>
 </html>
