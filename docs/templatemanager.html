@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref as dbRef, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref as dbRef, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
@@ -28,8 +28,8 @@
     const statusDiv = document.getElementById('status');
 
     let templateDataCache = {}; // Store templates for quick access in modal
+    let currentDeleteKey = null; // Track which template is being deleted
 
-    // Fetch and display templates on page load
     async function loadTemplates() {
       loadingIndicator.classList.remove('hidden');
       statusDiv.textContent = '';
@@ -76,7 +76,6 @@
       }
     }
 
-    // Helper to escape HTML for XSS prevention
     function escapeHtml(str) {
       if (!str) return '';
       return str.replace(/&/g, "&amp;")
@@ -86,7 +85,6 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Expose showTemplateModal to the global window for onclick
     window.showTemplateModal = function(key) {
       const modal = document.getElementById('template-modal');
       const overlay = document.getElementById('template-modal-overlay');
@@ -99,7 +97,6 @@
       } else if (template.scope === 'terra') {
         scope = 'Terra';
       }
-      // Format sections (read only)
       let sectionsHtml = '';
       if (template.sections) {
         Object.values(template.sections).forEach((section, idx) => {
@@ -123,28 +120,69 @@
         </div>
         <div class="flex justify-end gap-3 mt-8">
           <button id="edit-template-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold transition">Edit</button>
+          <button id="delete-template-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-semibold transition">Delete</button>
           <button id="close-modal-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 font-semibold transition">OK</button>
         </div>
       `;
       overlay.classList.remove('hidden');
       modal.classList.remove('hidden');
-      // Close logic
       document.getElementById('close-modal-btn').onclick = () => {
         modal.classList.add('hidden');
         overlay.classList.add('hidden');
       };
-      // Edit logic: redirect to templatecreator.html with ?edit=key
       document.getElementById('edit-template-btn').onclick = () => {
         window.location.href = `/docs/templatecreator.html?edit=${encodeURIComponent(key)}`;
       };
+      document.getElementById('delete-template-btn').onclick = () => {
+        showDeleteWarning(key, template.label || 'Untitled');
+      };
     };
 
-    // Run on page load
+    function showDeleteWarning(key, label) {
+      const deleteModal = document.getElementById('delete-warning-modal');
+      const deleteOverlay = document.getElementById('delete-warning-overlay');
+      const deleteContent = document.getElementById('delete-warning-content');
+      deleteContent.innerHTML = `
+        <div class="text-lg font-bold mb-2">Delete Template</div>
+        <div class="mb-4">
+          Are you sure you want to <span class="font-semibold text-red-600">delete</span> the template
+          <span class="font-semibold text-gray-800">"${escapeHtml(label)}"</span>?
+          <br>This action <span class="font-semibold text-red-600">cannot be undone</span>.
+        </div>
+        <div class="flex justify-end gap-3">
+          <button id="confirm-delete-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-semibold transition">Delete</button>
+          <button id="cancel-delete-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 font-semibold transition">Cancel</button>
+        </div>
+      `;
+      deleteOverlay.classList.remove('hidden');
+      deleteModal.classList.remove('hidden');
+      document.getElementById('cancel-delete-btn').onclick = () => {
+        deleteModal.classList.add('hidden');
+        deleteOverlay.classList.add('hidden');
+      };
+      document.getElementById('confirm-delete-btn').onclick = async () => {
+        await deleteTemplate(key);
+        deleteModal.classList.add('hidden');
+        deleteOverlay.classList.add('hidden');
+        // Also close template view modal
+        document.getElementById('template-modal').classList.add('hidden');
+        document.getElementById('template-modal-overlay').classList.add('hidden');
+      };
+    }
+
+    async function deleteTemplate(key) {
+      try {
+        await remove(dbRef(db, 'global_templates/' + key));
+        loadTemplates();
+      } catch (err) {
+        alert('Error deleting template: ' + err.message);
+      }
+    }
+
     loadTemplates();
   </script>
   <style>
-    /* Hide scrollbar for modal content if not needed */
-    #template-modal-content {
+    #template-modal-content, #delete-warning-content {
       max-height: 70vh;
       overflow-y: auto;
     }
@@ -173,10 +211,18 @@
     <a href="/docs/admin.html" class="text-blue-600 hover:underline">&larr; Back to Admin Dashboard</a>
   </footer>
 
-  <!-- Modal Overlay and Popup -->
+  <!-- Modal Overlay and Popup for Viewing Template -->
   <div id="template-modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-40"></div>
   <div id="template-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
     <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg mx-auto" id="template-modal-content">
+      <!-- Content will be injected by JS -->
+    </div>
+  </div>
+
+  <!-- Modal Overlay and Popup for Delete Warning -->
+  <div id="delete-warning-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50"></div>
+  <div id="delete-warning-modal" class="hidden fixed inset-0 z-60 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md mx-auto" id="delete-warning-content">
       <!-- Content will be injected by JS -->
     </div>
   </div>
