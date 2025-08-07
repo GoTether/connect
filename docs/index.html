@@ -1,18 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Firebase Load Test</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase.js"></script>
+  <title>Firebase Compat Test</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <h1>Firebase Test</h1>
   <pre id="result">Loading...</pre>
 
   <script>
-    if (typeof firebase === "undefined") {
-      document.getElementById("result").innerText = "❌ Firebase NOT loaded.";
+    const firebaseConfig = {
+      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      authDomain: "tether-71e0c.firebaseapp.com",
+      databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
+      projectId: "tether-71e0c",
+      storageBucket: "tether-71e0c.appspot.com",
+      messagingSenderId: "277809008742",
+      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
+      measurementId: "G-X7ZQ6DJYEN"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    if (typeof firebase !== "undefined") {
+      document.getElementById("result").innerText = "✅ Firebase loaded via compat!";
     } else {
-      document.getElementById("result").innerText = "✅ Firebase loaded!";
+      document.getElementById("result").innerText = "❌ Still not working.";
     }
   </script>
 </body>
