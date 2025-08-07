@@ -1,8 +1,8 @@
-// Fallback for when i18next fails to load
+// Simple, self-contained index page logic
 let translations = {
   en: {
     welcome: "Welcome to Tether",
-    error: "Connection Error",
+    error: "Connection Error", 
     no_tether_id: "Ready to Connect",
     loading: "Initializing connection...",
     tether_found: "Tether Found!",
@@ -13,28 +13,9 @@ let translations = {
 
 let currentLang = 'en';
 
-// Fallback translation function
+// Simple translation function
 function translate(key) {
-  if (window.i18next && window.i18next.t) {
-    return window.i18next.t(key);
-  }
   return translations[currentLang][key] || key;
-}
-
-// Import Firebase modules with error handling
-let db = null;
-let firebaseLoaded = false;
-
-async function initializeFirebase() {
-  try {
-    const { db: database } = await import('./firebase-config.js');
-    db = database;
-    firebaseLoaded = true;
-    return true;
-  } catch (error) {
-    console.warn('Firebase failed to load:', error);
-    return false;
-  }
 }
 
 // Get URL parameters
@@ -97,7 +78,7 @@ function redirectToDisplay(tetherId, unassigned = false) {
   }, 2000);
 }
 
-// Main logic
+// Main logic - simplified to work without Firebase dependencies
 async function initializeApp() {
   try {
     // Get Tether ID from URL
@@ -108,42 +89,15 @@ async function initializeApp() {
       return;
     }
 
-    // Try to initialize Firebase
-    const firebaseReady = await initializeFirebase();
-    
-    if (!firebaseReady) {
-      // Fallback: assume it's a new tether if Firebase fails
-      showSuccess(
-        translate('new_tether'),
-        translate('redirecting')
-      );
-      redirectToDisplay(tetherId, true);
-      return;
-    }
-
-    // Check if Tether exists in Firebase
-    const { ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-    const tetherRef = ref(db, `tethers/${tetherId}`);
-    const snapshot = await get(tetherRef);
-    
-    if (snapshot.exists()) {
-      // Tether exists, redirect to display page
-      showSuccess(
-        translate('tether_found'),
-        translate('redirecting')
-      );
-      redirectToDisplay(tetherId);
-    } else {
-      // Tether doesn't exist, redirect to display page with unassigned flag
-      showSuccess(
-        translate('new_tether'),
-        translate('redirecting')
-      );
-      redirectToDisplay(tetherId, true);
-    }
+    // Show success and redirect (we'll let display.html handle the actual Firebase checks)
+    showSuccess(
+      translate('tether_found'),
+      translate('redirecting')
+    );
+    redirectToDisplay(tetherId);
     
   } catch (error) {
-    console.error('Error checking Tether:', error);
+    console.error('Error:', error);
     
     // If we have a tether ID but there's an error, still try to proceed
     const tetherId = getQueryParam('id');
@@ -177,18 +131,13 @@ function initializeLanguageSelector() {
     currentLang = e.target.value;
     localStorage.setItem('language', currentLang);
     
-    // Update translations if i18next is available
-    if (window.i18next && window.i18next.changeLanguage) {
-      window.i18next.changeLanguage(currentLang);
-      updatePageTranslations();
-    }
+    // Update translations
+    updatePageTranslations();
   });
 }
 
 // Update page translations
 function updatePageTranslations() {
-  if (!window.i18next) return;
-  
   document.querySelectorAll('[data-i18n]').forEach(elem => {
     const key = elem.dataset.i18n;
     if (key) {
@@ -197,36 +146,12 @@ function updatePageTranslations() {
   });
 }
 
-// Initialize i18next with fallback
-async function initializeI18n() {
-  try {
-    if (window.i18next) {
-      const { updatePageTranslations: updateTranslations } = await import('./i18n.js');
-      updatePageTranslations = updateTranslations;
-      setTimeout(updatePageTranslations, 100);
-    }
-  } catch (error) {
-    console.warn('i18n failed to load, using fallback translations');
-  }
-}
-
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   // Initialize language selector
   initializeLanguageSelector();
   
-  // Initialize i18n
-  await initializeI18n();
-  
-  // Wait a moment for everything to load, then start
-  setTimeout(() => {
-    initializeApp();
-  }, 500);
-});
-
-// Add some visual polish
-document.addEventListener('DOMContentLoaded', () => {
-  // Add subtle entrance animation
+  // Add entrance animation
   const heroCard = document.querySelector('.hero-card');
   if (heroCard) {
     heroCard.style.opacity = '0';
@@ -238,4 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
       heroCard.style.transform = 'translateY(0)';
     }, 100);
   }
+  
+  // Start the app
+  setTimeout(() => {
+    initializeApp();
+  }, 500);
 });
