@@ -62,7 +62,7 @@
       const statusEl = document.getElementById('status-text');
 
       if (!id) {
-        statusEl.innerText = "Every object tells a story... Tether to it!";
+        statusEl.innerText = "Every object tells a story. Tether to it!";
         setTimeout(() => {
           window.location.href = "display.html";
         }, 1000);
@@ -76,7 +76,7 @@
           const exists = snapshot.exists();
           statusEl.innerText = exists
             ? "Tether found. Redirecting..."
-            : "Tether not found. Redirecting anyway...";
+            : "Every object tells a story.  Tether to it!";
           setTimeout(() => {
             window.location.href = `display.html?id=${id}`;
           }, 1000);
