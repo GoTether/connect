@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const appEl = document.getElementById("app");
 
-// Extract tether ID from URL
+// Get tether ID from URL
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
 // --- Modal control ---
@@ -33,7 +33,16 @@ function showModal(message, cb) {
   };
 }
 
-// --- No ID Provided ---
+// --- Reset function ---
+window.resetTether = function (id) {
+  if (confirm("Are you sure you want to delete this Tether and start over?")) {
+    remove(ref(db, `tethers/${id}`)).then(() => {
+      window.location.href = "display.html";
+    });
+  }
+};
+
+// --- Landing page (no ID) ---
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -101,7 +110,7 @@ async function renderUnassigned(id) {
   });
 }
 
-// --- Assigned Tether Display ---
+// --- Assigned Tether ---
 async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
   const tether = tSnap.val();
@@ -163,16 +172,7 @@ async function renderAssigned(id) {
   };
 }
 
-// --- Reset ---
-window.resetTether = function (id) {
-  if (confirm("Are you sure you want to delete this Tether and start over?")) {
-    remove(ref(db, `tethers/${id}`)).then(() => {
-      window.location.href = "display.html";
-    });
-  }
-};
-
-// --- App Start ---
+// --- App Boot ---
 if (!tetherId) {
   renderLanding();
 } else {
