@@ -20,7 +20,7 @@ const appEl = document.getElementById("app");
 // Get tether ID from URL
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// --- Modal control ---
+// Modal logic
 window.hideModal = function () {
   document.getElementById("modal").classList.add("hidden");
 };
@@ -33,7 +33,7 @@ function showModal(message, cb) {
   };
 }
 
-// --- Reset function ---
+// Reset tether
 window.resetTether = function (id) {
   if (confirm("Are you sure you want to delete this Tether and start over?")) {
     remove(ref(db, `tethers/${id}`)).then(() => {
@@ -42,7 +42,7 @@ window.resetTether = function (id) {
   }
 };
 
-// --- Landing page (no ID) ---
+// Landing page (no ID)
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -64,7 +64,7 @@ window.goToTether = function () {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// --- Unassigned Tether ---
+// Template assignment screen
 async function renderUnassigned(id) {
   const snap = await get(ref(db, `global_templates`));
   const allTemplates = snap.val() || {};
@@ -110,12 +110,17 @@ async function renderUnassigned(id) {
   });
 }
 
-// --- Assigned Tether ---
+// Assigned tether view
 async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
+  if (!tSnap.exists()) {
+    renderUnassigned(id);
+    return;
+  }
+
   const tether = tSnap.val();
   const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
-  const logsSnap = await get(child(ref(db), `tethers/${id}/logs`));
+  const logsSnap = await get(ref(db, `tethers/${id}/logs`));
   const logs = logsSnap.exists() ? Object.values(logsSnap.val()) : [];
 
   appEl.innerHTML = `
@@ -172,7 +177,7 @@ async function renderAssigned(id) {
   };
 }
 
-// --- App Boot ---
+// Startup
 if (!tetherId) {
   renderLanding();
 } else {
