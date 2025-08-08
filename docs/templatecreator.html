@@ -45,23 +45,40 @@
       const reader = new FileReader();
       reader.onload = function(event) {
         try {
-          const json = JSON.parse(event.target.result);
-          if (!json.name) {
-            message.textContent = "Invalid template: missing 'name' field.";
+          const parsed = JSON.parse(event.target.result);
+          const entries = Object.entries(parsed);
+
+          if (entries.length === 0) {
+            message.textContent = "JSON file is empty.";
             return;
           }
-          const refPath = `/global_templates/${json.name.replace(/\s+/g, '_').toLowerCase()}`;
-          db.ref(refPath).set(json).then(() => {
-            message.textContent = `Template '${json.name}' uploaded successfully.`;
-          }).catch(err => {
-            console.error(err);
-            message.textContent = "Upload failed. Check console for details.";
+
+          let successCount = 0;
+          let failCount = 0;
+
+          entries.forEach(([key, template]) => {
+            if (!template.name) {
+              console.warn(`Template '${key}' is missing a 'name' field.`);
+              failCount++;
+              return;
+            }
+
+            const refPath = `/global_templates/${key}`;
+            db.ref(refPath).update(template).then(() => {
+              successCount++;
+              message.textContent = `Uploaded ${successCount} template(s). Failed: ${failCount}`;
+            }).catch(err => {
+              console.error(`Failed to upload '${key}':`, err);
+              failCount++;
+              message.textContent = `Uploaded ${successCount} template(s). Failed: ${failCount}`;
+            });
           });
         } catch (e) {
           console.error(e);
           message.textContent = "Invalid JSON file.";
         }
       };
+
       reader.readAsText(file);
     }
   </script>
