@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tether Gateway</title>
+  <title>Tether Display</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -14,64 +14,66 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.6s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .floating-label {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      transition: 0.2s ease;
+      pointer-events: none;
+      color: #a0aec0;
+    }
+    .input-container:focus-within .floating-label,
+    .input-container input:not(:placeholder-shown) + .floating-label {
+      top: 0.2rem;
+      left: 0.75rem;
+      font-size: 0.75rem;
+      color: #cbd5e0;
+    }
     @media (prefers-reduced-motion: reduce) {
-      .animate-pulse, .animate-fade-in { animation: none !important; }
+      .fade-in { animation: none !important; }
     }
   </style>
 </head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-950 to-black text-white min-h-screen p-6">
 
-<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white flex items-center justify-center h-screen relative">
-
-  <!-- Center content -->
-  <main class="text-center animate-fade-in" role="main" aria-live="polite">
-    <div class="mb-4" aria-hidden="true">
-      <svg class="mx-auto w-20 h-20 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="1.5"
-           viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M12 6v6l4 2m6 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-    </div>
-    <h1 class="text-3xl font-semibold mb-2">Connecting to Tether</h1>
-    <p id="status-text" class="text-gray-300">Loading…</p>
+  <!-- Dynamic App Container -->
+  <main id="app" class="max-w-4xl mx-auto fade-in" role="main" aria-live="polite">
+    <!-- All content is rendered dynamically by display-logic.js -->
   </main>
 
-  <!-- Timestamp label -->
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden bg-black/60" role="dialog" aria-modal="true">
+    <div class="bg-slate-800 glass p-6 rounded-lg shadow-xl max-w-sm w-full text-center border border-slate-600">
+      <p id="modal-text" class="mb-4 text-white text-lg font-medium">Are you sure?</p>
+      <div class="flex justify-center gap-4">
+        <button id="modal-save" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white min-w-[80px]">OK</button>
+        <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white min-w-[80px]">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Build Timestamp -->
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
     Build: <script>document.write(new Date().toLocaleString())</script>
   </div>
 
-  <script type="module">
-    // Small, robust router:
-    // - If ?id= exists -> redirect to display.html?id=...
-    // - If no id -> brief welcome, then redirect to display.html (unassigned flow)
-    const statusEl = document.getElementById('status-text');
-    const params = new URLSearchParams(window.location.search);
-    const id = (params.get('id') || '').trim();
-
-    const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-    (async () => {
-      if (!id) {
-        statusEl.textContent = "Every object tells a story. Tether to it!";
-        await delay(700);
-        window.location.replace("display.html");
-        return;
-      }
-
-      // Sanitize id lightly (avoid accidental spaces/control chars)
-      const safeId = id.replace(/[^\w\-:.@]/g, "");
-      statusEl.textContent = "Tether found. Redirecting…";
-      await delay(400);
-      window.location.replace(`display.html?id=${encodeURIComponent(safeId)}`);
-    })();
-
-    // Debug helper: press "/" to alert current id
-    document.addEventListener('keydown', (e) => {
-      if (e.key === '/') {
-        const id = new URLSearchParams(window.location.search).get('id') || '(none)';
-        alert("Tether ID: " + id);
-      }
-    });
-  </script>
+  <!-- App Logic -->
+  <script type="module" src="display-logic.js"></script>
+  <noscript>
+    <div class="fixed bottom-4 left-4 bg-red-700 text-white p-3 rounded">
+      JavaScript is required to use Tether.
+    </div>
+  </noscript>
 </body>
 </html>
