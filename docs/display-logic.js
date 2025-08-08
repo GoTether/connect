@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Initialize Firebase
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
   authDomain: "tether-71e0c.firebaseapp.com",
@@ -15,18 +15,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const appEl = document.getElementById("app");
-
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// Modal control
+// --- Modal Control ---
 function showModal(message, cb, showCancel = false) {
   const modal = document.getElementById("modal");
   const text = document.getElementById("modal-text");
-  const ok = document.getElementById("modal-ok");
+  const ok = document.getElementById("modal-save");
   const cancel = document.getElementById("modal-cancel");
 
   text.textContent = message;
   modal.classList.remove("hidden");
+
+  ok.textContent = "OK";
+  cancel.textContent = "Cancel";
 
   ok.onclick = () => {
     modal.classList.add("hidden");
@@ -42,7 +44,7 @@ function showModal(message, cb, showCancel = false) {
 }
 window.hideModal = () => document.getElementById("modal").classList.add("hidden");
 
-// Geolocation to City/State
+// --- Reverse Geolocation ---
 async function getLocationName(lat, lon) {
   try {
     const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=62199178dce5478f9888f630820a45da`);
@@ -54,7 +56,7 @@ async function getLocationName(lat, lon) {
   }
 }
 
-// Reset
+// --- Reset ---
 window.resetTether = (id) => {
   showModal("Are you sure you want to delete this Tether and start over?", confirmed => {
     if (confirmed) {
@@ -63,7 +65,7 @@ window.resetTether = (id) => {
   }, true);
 };
 
-// Landing screen
+// --- Landing ---
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -85,7 +87,7 @@ window.goToTether = () => {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// Unassigned tether
+// --- Unassigned ---
 async function renderUnassigned(id) {
   const snap = await get(ref(db, `global_templates`));
   const allTemplates = snap.val() || {};
@@ -125,15 +127,13 @@ async function renderUnassigned(id) {
 }
 
 function showStaticFieldModal(template, templateId, tetherId) {
-  const formHtml = (template.static_fields || []).map(field => {
-    return `
-      <label class="block text-left text-sm mt-2">${field.name}</label>
-      <input name="${field.name}" type="text" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"/>
-    `;
-  }).join("");
+  const formHtml = (template.static_fields || []).map(field => `
+    <label class="block text-left text-sm mt-2">${field.name}</label>
+    <input name="${field.name}" type="text" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"/>
+  `).join("");
 
-  const modalContent = `
-    <div class="text-white p-6 bg-slate-800 rounded-lg space-y-4 max-w-md mx-auto">
+  appEl.innerHTML = `
+    <div class="text-white p-6 bg-slate-800 rounded-lg space-y-4 max-w-md mx-auto mt-20">
       <h3 class="text-xl font-semibold">Enter Details</h3>
       <form id="staticForm" class="space-y-2">${formHtml}</form>
       <div class="flex justify-end gap-4 mt-4">
@@ -142,8 +142,6 @@ function showStaticFieldModal(template, templateId, tetherId) {
       </div>
     </div>
   `;
-
-  appEl.innerHTML = modalContent;
 
   document.getElementById("cancelStatic").onclick = () => window.location.reload();
   document.getElementById("saveStatic").onclick = async () => {
@@ -161,7 +159,7 @@ function showStaticFieldModal(template, templateId, tetherId) {
   };
 }
 
-// Assigned tether
+// --- Assigned Tether ---
 async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
   const tether = tSnap.val();
@@ -225,12 +223,11 @@ async function renderAssigned(id) {
   document.getElementById("logForm").onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const logEntry = {
-      timestamp: new Date().toISOString()
-    };
+    const logEntry = { timestamp: new Date().toISOString() };
     for (const [key, val] of formData.entries()) {
       logEntry[key] = val;
     }
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
         const loc = await getLocationName(pos.coords.latitude, pos.coords.longitude);
@@ -245,7 +242,7 @@ async function renderAssigned(id) {
   };
 }
 
-// Init
+// --- Initialize ---
 if (!tetherId) {
   renderLanding();
 } else {
