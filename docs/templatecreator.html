@@ -1,75 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Template Creator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terra Template Uploader</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Upload Template to Firebase</h1>
 
+    <input type="file" id="fileInput" accept=".json" class="mb-4">
+    <button onclick="uploadTemplate()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Upload</button>
+
+    <div id="message" class="mt-4 text-sm"></div>
+  </div>
+
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
+      apiKey: "AIzaSyDc4-6hXgE9_qCqz92OjgZkS0HQFRJZdB4",
       authDomain: "tether-71e0c.firebaseapp.com",
       databaseURL: "https://tether-71e0c-default-rtdb.firebaseio.com",
       projectId: "tether-71e0c",
       storageBucket: "tether-71e0c.appspot.com",
-      messagingSenderId: "277809008742",
-      appId: "1:277809008742:web:2586a2b821d8da8f969da7",
-      measurementId: "G-X7ZQ6DJYEN"
+      messagingSenderId: "1003208436207",
+      appId: "1:1003208436207:web:b90b9bb9c308168257d9e3"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    window.saveToFirebase = async function(template) {
-      try {
-        await set(ref(db, 'global_templates/' + template.key), template);
-        if (window.confirm('Your template has been saved successfully.')) {
-          window.location.reload();
-        }
-      } catch (err) {
-        document.getElementById('status').textContent = '❌ Error saving template: ' + err.message;
+    function uploadTemplate() {
+      const fileInput = document.getElementById('fileInput');
+      const message = document.getElementById('message');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        message.textContent = "Please select a JSON file to upload.";
+        return;
       }
-    };
-  </script>
-</head>
-<body class="bg-gray-100 text-gray-800 font-sans">
-  <div class="w-full text-center py-2 bg-gray-200 text-sm">
-    <a href="/docs/admin.html" class="text-blue-600 hover:underline">← Back to Admin Dashboard</a>
-  </div>
-  <main class="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-md mt-6">
-    <h1 class="text-2xl font-bold mb-6">Template Creator</h1>
-    <div class="mb-6">
-      <span class="font-semibold">Tether Type:</span>
-      <label class="inline-flex items-center ml-4">
-        <input type="radio" name="log_scope" value="aura" checked class="mr-2">Aura
-      </label>
-      <label class="inline-flex items-center ml-6">
-        <input type="radio" name="log_scope" value="terra" class="mr-2">Terra
-      </label>
-    </div>
-    <div class="grid grid-cols-1 gap-4 mb-6">
-      <div>
-        <label class="block font-medium mb-1" for="template-label">Template Label</label>
-        <input id="template-label" type="text" class="w-full border border-gray-300 p-2 rounded" required />
-      </div>
-    </div>
-    <div id="sections-container" class="space-y-6 mb-6"></div>
-    <div class="mb-6">
-      <button id="add-section" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Section</button>
-    </div>
-    <div class="mt-8">
-      <button id="submit-template" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold">Create Template</button>
-      <div id="status" class="text-red-600 mt-2"></div>
-    </div>
-  </main>
-  <div class="w-full text-center py-4 bg-gray-100 text-sm">
-    <a href="/docs/admin.html" class="text-blue-600 hover:underline">← Back to Admin Dashboard</a>
-  </div>
-  <script>
-    // Existing JS unchanged...
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const json = JSON.parse(event.target.result);
+          if (!json.name) {
+            message.textContent = "Invalid template: missing 'name' field.";
+            return;
+          }
+          const refPath = `/global_templates/${json.name.replace(/\s+/g, '_').toLowerCase()}`;
+          db.ref(refPath).set(json).then(() => {
+            message.textContent = `Template '${json.name}' uploaded successfully.`;
+          }).catch(err => {
+            console.error(err);
+            message.textContent = "Upload failed. Check console for details.";
+          });
+        } catch (e) {
+          console.error(e);
+          message.textContent = "Invalid JSON file.";
+        }
+      };
+      reader.readAsText(file);
+    }
   </script>
 </body>
 </html>
