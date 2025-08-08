@@ -19,9 +19,10 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const appEl = document.getElementById("app");
 
+// Get tether ID from URL
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// --- Modal Control ---
+// --- Modal ---
 window.hideModal = function () {
   document.getElementById("modal").classList.add("hidden");
 };
@@ -34,19 +35,6 @@ function showModal(message, cb) {
   };
 }
 
-// --- Reverse Geocoding ---
-async function reverseGeocode(lat, lon) {
-  const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${OPENCAGE_API_KEY}`);
-  const data = await res.json();
-  if (!data?.results?.length) return `${lat}, ${lon}`;
-
-  const components = data.results[0].components;
-  const city = components.city || components.town || components.village;
-  const state = components.state;
-
-  return [city, state].filter(Boolean).join(", ");
-}
-
 // --- Reset ---
 window.resetTether = function (id) {
   if (confirm("Are you sure you want to delete this Tether and start over?")) {
@@ -55,6 +43,31 @@ window.resetTether = function (id) {
     });
   }
 };
+
+// --- Geolocation ---
+async function getGeolocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${OPENCAGE_API_KEY}`);
+    const data = await res.json();
+    const components = data.results[0]?.components || {};
+    const city = components.city || components.town || components.village || components.hamlet;
+    const state = components.state;
+    return [city, state].filter(Boolean).join(", ") || `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+  } catch {
+    return `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+  }
+}
 
 // --- Landing Page ---
 function renderLanding() {
@@ -78,7 +91,7 @@ window.goToTether = function () {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// --- Unassigned Tether Setup ---
+// --- Assign Template ---
 async function renderUnassigned(id) {
   const snap = await get(ref(db, `global_templates`));
   const allTemplates = snap.val() || {};
@@ -100,8 +113,8 @@ async function renderUnassigned(id) {
   document.getElementById("templateSelect").addEventListener("change", async () => {
     const selectedId = document.getElementById("templateSelect").value;
     const template = (await get(ref(db, `global_templates/${selectedId}`))).val();
-
     const preview = document.getElementById("templatePreview");
+
     preview.innerHTML = `
       <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
       <div class="bg-slate-700 p-4 rounded space-y-2">
@@ -112,44 +125,35 @@ async function renderUnassigned(id) {
       </div>
     `;
     document.getElementById("assignBtn").classList.remove("hidden");
+    document.getElementById("assignBtn").onclick = async () => {
+      // Open modal to fill static fields before assigning
+      const staticData = {};
+      const formHtml = (template.static_fields || []).map(f => `
+        <div class="mb-2 text-left">
+          <label class="block mb-1 text-sm">${f.name}</label>
+          <input id="static-${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"/>
+        </div>`).join("");
 
-    document.getElementById("assignBtn").onclick = () => {
-      showStaticFieldForm(id, selectedId, template);
+      showModal(`
+        <h3 class="text-lg font-semibold mb-2">Fill out static information</h3>
+        <form id="staticForm">${formHtml}</form>
+      `, async () => {
+        (template.static_fields || []).forEach(f => {
+          const val = document.getElementById(`static-${f.name}`)?.value || "";
+          staticData[f.name] = val;
+        });
+        await set(ref(db, `tethers/${id}`), {
+          template: selectedId,
+          static: staticData,
+          logs: []
+        });
+        window.location.reload();
+      });
     };
   });
 }
 
-function showStaticFieldForm(id, templateId, template) {
-  const fields = (template.static_fields || []);
-  appEl.innerHTML = `
-    <div class="max-w-lg mx-auto mt-20 space-y-6">
-      <h2 class="text-2xl font-bold mb-4">Fill Out Static Info</h2>
-      <form id="staticForm" class="space-y-4">
-        ${fields.map(f => `
-          <div>
-            <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
-            <input name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" required="${f.required || false}" />
-          </div>
-        `).join("")}
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">Save and Continue</button>
-      </form>
-    </div>
-  `;
-  document.getElementById("staticForm").onsubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const staticData = {};
-    for (const [k, v] of formData.entries()) staticData[k] = v;
-    await set(ref(db, `tethers/${id}`), {
-      template: templateId,
-      static: staticData,
-      logs: []
-    });
-    showModal("Template assigned!", () => window.location.reload());
-  };
-}
-
-// --- Assigned Tether View ---
+// --- Assigned Display ---
 async function renderAssigned(id) {
   const tSnap = await get(ref(db, `tethers/${id}`));
   const tether = tSnap.val();
@@ -190,8 +194,8 @@ async function renderAssigned(id) {
         ${logs.map(log => `
           <div class="bg-slate-700 rounded p-3 border border-slate-600">
             <p class="text-sm text-gray-300 mb-1">${new Date(log.timestamp).toLocaleString()}</p>
-            ${log.location ? `<p class="text-sm text-gray-400 italic">Location: ${log.location}</p>` : ""}
-            ${Object.entries(log).filter(([k]) => !["timestamp", "location"].includes(k)).map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
+            ${log.location ? `<p class="text-sm italic text-indigo-300">${log.location}</p>` : ""}
+            ${Object.entries(log).filter(([k]) => k !== "timestamp" && k !== "location").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
           </div>
         `).join("")}
       </div>
@@ -201,31 +205,22 @@ async function renderAssigned(id) {
   document.getElementById("logForm").onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const logEntry = {
-      timestamp: new Date().toISOString()
-    };
-    for (const [key, val] of formData.entries()) {
-      logEntry[key] = val;
+    const logEntry = { timestamp: new Date().toISOString() };
+
+    for (const [key, val] of formData.entries()) logEntry[key] = val;
+
+    const geo = await getGeolocation();
+    if (geo) {
+      const address = await reverseGeocode(geo.lat, geo.lon);
+      logEntry.location = address;
     }
 
-    try {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        logEntry.location = await reverseGeocode(latitude, longitude);
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved!", () => window.location.reload());
-      }, async () => {
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved (no location)!", () => window.location.reload());
-      });
-    } catch {
-      await push(ref(db, `tethers/${id}/logs`), logEntry);
-      showModal("Entry saved!", () => window.location.reload());
-    }
+    await push(ref(db, `tethers/${id}/logs`), logEntry);
+    showModal("Entry saved!", () => window.location.reload());
   };
 }
 
-// --- App Entry Point ---
+// --- Init ---
 if (!tetherId) {
   renderLanding();
 } else {
