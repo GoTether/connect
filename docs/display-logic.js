@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ==================== Firebase init ====================
+/* ==================== Firebase init ==================== */
 const firebaseConfig = {
   apiKey: "AIzaSyAZoL7FPJ8wBqz_sX81Fo5eKXpsOVrLUZ0",
   authDomain: "tether-71e0c.firebaseapp.com",
@@ -17,17 +17,29 @@ const db = getDatabase(app);
 const appEl = document.getElementById("app");
 const tetherId = new URLSearchParams(window.location.search).get("id");
 
-// ==================== Modal controls ====================
+/* ==================== Helpers ==================== */
+function escAttr(name) {
+  // Minimal attr escape for querySelector [name="..."]
+  return String(name).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+/* ==================== Modal controls ==================== */
 function showModal(message, callback = null, showCancel = false) {
   const modal = document.getElementById("modal");
   const text = document.getElementById("modal-text");
   const saveBtn = document.getElementById("modal-save");
   const cancelBtn = document.getElementById("modal-cancel");
 
+  if (!modal || !text || !saveBtn || !cancelBtn) {
+    // If modal somehow isn't present, just callback and bail
+    console.warn("Modal elements missing");
+    callback?.(true);
+    return;
+  }
+
   text.textContent = message;
   modal.classList.remove("hidden");
 
-  // Per your UX note: prefer "OK" / "Cancel"
   saveBtn.textContent = "OK";
   cancelBtn.textContent = "Cancel";
   cancelBtn.classList.toggle("hidden", !showCancel);
@@ -41,21 +53,21 @@ function showModal(message, callback = null, showCancel = false) {
     callback?.(false);
   };
 }
-window.hideModal = () => document.getElementById("modal").classList.add("hidden");
+window.hideModal = () => document.getElementById("modal")?.classList.add("hidden");
 
-// ==================== Geo: lat/lon -> City, State ====================
+/* ==================== Geo: lat/lon -> City, State ==================== */
 async function getLocationName(lat, lon) {
   try {
     const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=62199178dce5478f9888f630820a45da`);
     const data = await res.json();
-    const c = data.results[0]?.components;
+    const c = data.results?.[0]?.components;
     return c ? `${c.city || c.town || c.village || ""}, ${c.state || ""}` : `${lat}, ${lon}`;
   } catch {
     return `${lat}, ${lon}`;
   }
 }
 
-// ==================== Reset tether (Terra) ====================
+/* ==================== Reset tether (Terra) ==================== */
 window.resetTether = (id) => {
   showModal("Are you sure you want to delete this Tether and start over?", async (confirmed) => {
     if (!confirmed) return;
@@ -64,7 +76,7 @@ window.resetTether = (id) => {
   }, true);
 };
 
-// ==================== Landing (no id) ====================
+/* ==================== Landing (no id) ==================== */
 function renderLanding() {
   appEl.innerHTML = `
     <div class="text-center mt-24 space-y-6">
@@ -77,17 +89,17 @@ function renderLanding() {
       </div>
     </div>
   `;
-  document.getElementById("goBtn").onclick = () => window.goToTether();
-  document.getElementById("manualId").addEventListener("keydown", e => {
+  document.getElementById("goBtn")?.addEventListener("click", () => window.goToTether());
+  document.getElementById("manualId")?.addEventListener("keydown", e => {
     if (e.key === "Enter") window.goToTether();
   });
 }
 window.goToTether = () => {
-  const id = document.getElementById("manualId").value.trim();
+  const id = document.getElementById("manualId")?.value?.trim();
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-// ==================== Unassigned tether flow ====================
+/* ==================== Unassigned tether flow ==================== */
 async function renderUnassigned(id) {
   const snap = await get(ref(db, "global_templates"));
   const templates = snap.val() || {};
@@ -106,7 +118,7 @@ async function renderUnassigned(id) {
     </div>
   `;
 
-  document.getElementById("templateSelect").addEventListener("change", async () => {
+  document.getElementById("templateSelect")?.addEventListener("change", async () => {
     const templateId = document.getElementById("templateSelect").value;
     const template = (await get(ref(db, `global_templates/${templateId}`))).val();
 
@@ -115,21 +127,23 @@ async function renderUnassigned(id) {
               : (Array.isArray(template.fields) ? template.fields : []);
 
     const preview = document.getElementById("templatePreview");
-    preview.innerHTML = `
-      <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
-      <div class="bg-slate-700 p-4 rounded space-y-2">
-        <p class="text-sm text-gray-400">Static Fields:</p>
-        ${staticFields.length ? staticFields.map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("") : `<p class="text-gray-500">None</p>`}
-        <p class="text-sm text-gray-400 mt-2">Dynamic Fields:</p>
-        ${dyn.length ? dyn.map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("") : `<p class="text-gray-500">None</p>`}
-      </div>
-    `;
-    document.getElementById("assignBtn").classList.remove("hidden");
-    document.getElementById("assignBtn").onclick = () => showStaticFieldModal(template, templateId, id);
+    if (preview) {
+      preview.innerHTML = `
+        <h3 class="text-indigo-300 text-lg font-semibold">Preview: ${template.name}</h3>
+        <div class="bg-slate-700 p-4 rounded space-y-2">
+          <p class="text-sm text-gray-400">Static Fields:</p>
+          ${staticFields.length ? staticFields.map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("") : `<p class="text-gray-500">None</p>`}
+          <p class="text-sm text-gray-400 mt-2">Dynamic Fields:</p>
+          ${dyn.length ? dyn.map(f => `<p><strong>${f.name}</strong> (${f.type})</p>`).join("") : `<p class="text-gray-500">None</p>`}
+        </div>
+      `;
+    }
+    document.getElementById("assignBtn")?.classList.remove("hidden");
+    document.getElementById("assignBtn")?.addEventListener("click", () => showStaticFieldModal(template, templateId, id));
   });
 }
 
-// ==================== Static field modal (Terra setup) ====================
+/* ==================== Static field modal (Terra setup) ==================== */
 function showStaticFieldModal(template, templateId, tetherId) {
   const staticFields = Array.isArray(template.static_fields) ? template.static_fields : [];
   appEl.innerHTML = `
@@ -150,8 +164,8 @@ function showStaticFieldModal(template, templateId, tetherId) {
     </div>
   `;
 
-  document.getElementById("cancelStatic").onclick = () => window.location.reload();
-  document.getElementById("saveStatic").onclick = async () => {
+  document.getElementById("cancelStatic")?.addEventListener("click", () => window.location.reload());
+  document.getElementById("saveStatic")?.addEventListener("click", async () => {
     const formData = new FormData(document.getElementById("staticForm"));
     const staticData = {};
     for (const [k, v] of formData.entries()) staticData[k] = v;
@@ -165,10 +179,10 @@ function showStaticFieldModal(template, templateId, tetherId) {
     showModal("Tether created!", () => {
       window.location.href = `display.html?id=${tetherId}`;
     });
-  };
+  });
 }
 
-// ==================== Stopwatch logic ====================
+/* ==================== Stopwatch logic ==================== */
 let timerStart = null;
 let timerInterval = null;
 
@@ -183,9 +197,20 @@ function updateStopwatchDisplay() {
 
 function setupStopwatch(tether, template, nonTimestampFields) {
   const startBtn = document.getElementById("start-button");
-  const stopBtn = document.getElementById("stop-button");
+  const stopBtn  = document.getElementById("stop-button");
+  const display  = document.getElementById("stopwatch-display");
 
-  // recover running session from localStorage if present
+  // Guard: if the HTML didn't render, don't crash
+  if (!startBtn || !stopBtn || !display) {
+    console.warn("Stopwatch controls not found in DOM.");
+    showModal("Stopwatch UI failed to render. Try reloading.", null, true);
+    return;
+  }
+
+  // Prevent double clicks while saving
+  let saving = false;
+
+  // Recover running session if present
   const key = `tether:${tetherId}:stopwatchStart`;
   const savedStart = localStorage.getItem(key);
   if (savedStart) {
@@ -199,8 +224,9 @@ function setupStopwatch(tether, template, nonTimestampFields) {
   }
 
   startBtn.onclick = () => {
+    if (saving) return;
     timerStart = Date.now();
-    localStorage.setItem(key, `${timerStart}`);
+    localStorage.setItem(key, String(timerStart));
     updateStopwatchDisplay();
     timerInterval = setInterval(updateStopwatchDisplay, 1000);
     startBtn.classList.add("hidden");
@@ -208,11 +234,15 @@ function setupStopwatch(tether, template, nonTimestampFields) {
   };
 
   stopBtn.onclick = async () => {
+    if (saving) return;
+    saving = true;
+    stopBtn.disabled = true;
+    stopBtn.textContent = "Saving…";
+
     clearInterval(timerInterval);
     const end = Date.now();
     const durationMin = Math.max(0, Math.round((end - timerStart) / 60000));
 
-    // Build log
     const log = {
       timestamp: new Date().toISOString(),
       "Start Time": new Date(timerStart).toISOString(),
@@ -220,53 +250,56 @@ function setupStopwatch(tether, template, nonTimestampFields) {
       "Duration (minutes)": durationMin
     };
 
-    // Pull optional extra fields from the small form (if present)
-    for (const f of nonTimestampFields) {
-      const name = f.name;
-      const el = document.querySelector(`[name="${CSS.escape(name)}"]`);
-      if (!el) continue;
-      const val = el.value?.trim?.() ?? el.value;
-      if (val) log[name] = val;
+    // Optional extras from the small form
+    for (const f of (nonTimestampFields || [])) {
+      const el = document.querySelector(`[name="${escAttr(f.name)}"]`);
+      const val = el?.value?.trim?.();
+      if (val) log[f.name] = val;
     }
 
-    // Clear persisted start
     localStorage.removeItem(key);
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async pos => {
-        try {
-          log["Location"] = await getLocationName(pos.coords.latitude, pos.coords.longitude);
-        } catch (_) {}
-        await push(ref(db, `tethers/${tetherId}/logs`), log);
-        showModal("Entry saved!", () => window.location.reload());
-      }, async () => {
-        await push(ref(db, `tethers/${tetherId}/logs`), log);
-        showModal("Entry saved!", () => window.location.reload());
-      });
-    } else {
+    const save = async () => {
       await push(ref(db, `tethers/${tetherId}/logs`), log);
       showModal("Entry saved!", () => window.location.reload());
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          try {
+            log["Location"] = await getLocationName(pos.coords.latitude, pos.coords.longitude);
+          } catch {}
+          await save();
+        },
+        async () => { await save(); }
+      );
+    } else {
+      await save();
     }
   };
 }
 
-// ==================== Assigned tether ====================
+/* ==================== Assigned tether ==================== */
 async function renderAssigned(id) {
   const snap = await get(ref(db, `tethers/${id}`));
   const tether = snap.val();
   const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
   const logsSnap = await get(child(ref(db), `tethers/${id}/logs`));
   const logs = logsSnap.exists() ? Object.values(logsSnap.val()) : [];
+  // Sort newest -> oldest
+  logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const dynamicFields = Array.isArray(template.fields) ? template.fields
                       : (Array.isArray(template.dynamic_fields) ? template.dynamic_fields : []);
-  const staticFields = Array.isArray(template.static_fields) ? template.static_fields : [];
-  const hasTimestampField = dynamicFields.some(f => f.type === "timestamp");
+  const staticFields  = Array.isArray(template.static_fields) ? template.static_fields : [];
+
+  const hasTimestampField = dynamicFields.some(f => String(f.type).toLowerCase() === "timestamp");
 
   if (hasTimestampField) {
-    // Render stopwatch mode, plus any *non-timestamp* fields as optional extras.
-    const nonTimestampFields = dynamicFields.filter(f => f.type !== "timestamp");
+    const nonTimestampFields = dynamicFields.filter(f => String(f.type).toLowerCase() !== "timestamp");
 
+    // Stopwatch UI + optional extras + log list
     appEl.innerHTML = `
       <div class="space-y-8">
         <div>
@@ -300,7 +333,8 @@ async function renderAssigned(id) {
           <form id="extrasForm" class="space-y-4 max-w-xl mx-auto">
             <h2 class="text-lg font-semibold">Optional details</h2>
             ${nonTimestampFields.map(f => {
-              if (f.type === "dropdown") {
+              const type = String(f.type).toLowerCase();
+              if (type === "dropdown") {
                 return `
                   <div>
                     <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
@@ -309,7 +343,7 @@ async function renderAssigned(id) {
                     </select>
                   </div>
                 `;
-              } else if (f.type === "textarea") {
+              } else if (type === "textarea") {
                 return `
                   <div>
                     <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
@@ -317,7 +351,7 @@ async function renderAssigned(id) {
                   </div>
                 `;
               } else {
-                const inputType = (["text","number","date","time","datetime-local"].includes(f.type)) ? f.type : "text";
+                const inputType = (["text","number","date","time","datetime-local"].includes(type)) ? type : "text";
                 return `
                   <div>
                     <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
@@ -332,7 +366,7 @@ async function renderAssigned(id) {
         <div class="space-y-3" id="logList">
           ${logs.map(log => `
             <div class="bg-slate-700 rounded p-3 border border-slate-600">
-              <p class="text-sm text-gray-300 mb-1">${new Date(log.timestamp).toLocaleString()}</p>
+              <p class="text-sm text-gray-300 mb-1">${log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}</p>
               ${Object.entries(log).filter(([k]) => k !== "timestamp").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
             </div>
           `).join("")}
@@ -344,7 +378,7 @@ async function renderAssigned(id) {
     return;
   }
 
-  // ===== Fallback to regular form-based UI =====
+  /* ===== Fallback to regular form-based UI (no stopwatch) ===== */
   appEl.innerHTML = `
     <div class="space-y-8">
       <div>
@@ -354,7 +388,7 @@ async function renderAssigned(id) {
         <button onclick="resetTether('${id}')" class="text-red-400 text-sm underline hover:text-red-300 mt-1">Reset this Tether</button>
       </div>
 
-      ${staticFields.length ? `
+      ${Array.isArray(staticFields) && staticFields.length ? `
         <div class="bg-slate-700 p-4 rounded space-y-2">
           ${staticFields.map(f => `
             <div>
@@ -367,7 +401,8 @@ async function renderAssigned(id) {
       <form id="logForm" class="space-y-4">
         <h2 class="text-xl font-semibold">New Entry</h2>
         ${dynamicFields.map(f => {
-          if (f.type === "dropdown") {
+          const type = String(f.type || "text").toLowerCase();
+          if (type === "dropdown") {
             return `
               <div>
                 <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
@@ -376,7 +411,7 @@ async function renderAssigned(id) {
                 </select>
               </div>
             `;
-          } else if (f.type === "textarea") {
+          } else if (type === "textarea") {
             return `
               <div>
                 <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
@@ -384,8 +419,8 @@ async function renderAssigned(id) {
               </div>
             `;
           } else {
-            const inputType = (["text","number","date","time","datetime-local","timestamp"].includes(f.type))
-              ? (f.type === "timestamp" ? "datetime-local" : f.type)
+            const inputType = (["text","number","date","time","datetime-local","timestamp"].includes(type))
+              ? (type === "timestamp" ? "datetime-local" : type)
               : "text";
             return `
               <div>
@@ -401,7 +436,7 @@ async function renderAssigned(id) {
       <div class="space-y-3" id="logList">
         ${logs.map(log => `
           <div class="bg-slate-700 rounded p-3 border border-slate-600">
-            <p class="text-sm text-gray-300 mb-1">${new Date(log.timestamp).toLocaleString()}</p>
+            <p class="text-sm text-gray-300 mb-1">${log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}</p>
             ${Object.entries(log).filter(([k]) => k !== "timestamp").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
           </div>
         `).join("")}
@@ -409,29 +444,31 @@ async function renderAssigned(id) {
     </div>
   `;
 
-  document.getElementById("logForm").onsubmit = async (e) => {
+  document.getElementById("logForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const logEntry = { timestamp: new Date().toISOString() };
     for (const [k, v] of formData.entries()) logEntry[k] = v;
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async pos => {
-        logEntry["Location"] = await getLocationName(pos.coords.latitude, pos.coords.longitude);
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved!", () => window.location.reload());
-      }, async () => {
-        await push(ref(db, `tethers/${id}/logs`), logEntry);
-        showModal("Entry saved!", () => window.location.reload());
-      });
-    } else {
+    const save = async () => {
       await push(ref(db, `tethers/${id}/logs`), logEntry);
       showModal("Entry saved!", () => window.location.reload());
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        try {
+          logEntry["Location"] = await getLocationName(pos.coords.latitude, pos.coords.longitude);
+        } catch {}
+        await save();
+      }, async () => { await save(); });
+    } else {
+      await save();
     }
-  };
+  });
 }
 
-// ==================== Init ====================
+/* ==================== Init ==================== */
 if (!tetherId) {
   renderLanding();
 } else {
