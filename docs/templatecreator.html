@@ -46,25 +46,30 @@
       reader.onload = function(event) {
         try {
           const parsed = JSON.parse(event.target.result);
-          const entries = Object.entries(parsed);
+          let successCount = 0;
+          let failCount = 0;
 
+          if (parsed.name && parsed.dynamic_fields) {
+            // Single template object
+            const key = parsed.name.replace(/\s+/g, '_').toLowerCase();
+            db.ref(`/global_templates/${key}`).update(parsed).then(() => {
+              message.textContent = `Uploaded template '${parsed.name}' successfully.`;
+            }).catch(err => {
+              console.error(err);
+              message.textContent = `Failed to upload template '${parsed.name}'.`;
+            });
+            return;
+          }
+
+          // Multiple templates (object of objects)
+          const entries = Object.entries(parsed);
           if (entries.length === 0) {
             message.textContent = "JSON file is empty.";
             return;
           }
 
-          let successCount = 0;
-          let failCount = 0;
-
           entries.forEach(([key, template]) => {
-            if (!template.name) {
-              console.warn(`Template '${key}' is missing a 'name' field.`);
-              failCount++;
-              return;
-            }
-
-            const refPath = `/global_templates/${key}`;
-            db.ref(refPath).update(template).then(() => {
+            db.ref(`/global_templates/${key}`).update(template).then(() => {
               successCount++;
               message.textContent = `Uploaded ${successCount} template(s). Failed: ${failCount}`;
             }).catch(err => {
@@ -73,6 +78,7 @@
               message.textContent = `Uploaded ${successCount} template(s). Failed: ${failCount}`;
             });
           });
+
         } catch (e) {
           console.error(e);
           message.textContent = "Invalid JSON file.";
