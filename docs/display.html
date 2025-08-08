@@ -37,18 +37,31 @@
   </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-slate-950 to-black text-white min-h-screen p-6">
-  <div id="app" class="max-w-4xl mx-auto fade-in" role="main"></div>
+  <div id="app" class="max-w-4xl mx-auto fade-in" role="main">
+    <!-- App content rendered by display-logic.js -->
+  </div>
 
   <!-- Modal -->
-<div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden bg-black/60" role="dialog" aria-modal="true">
-  <div class="bg-slate-800 glass p-6 rounded-lg shadow-xl max-w-sm w-full text-center border border-slate-600">
-    <p id="modal-text" class="mb-4 text-white text-lg font-medium">Are you sure?</p>
-    <div class="flex justify-center gap-4">
-      <button id="modal-save" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white min-w-[80px]">OK</button>
-      <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white min-w-[80px]">Cancel</button>
+  <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden bg-black/60" role="dialog" aria-modal="true">
+    <div class="bg-slate-800 glass p-6 rounded-lg shadow-xl max-w-sm w-full text-center border border-slate-600">
+      <p id="modal-text" class="mb-4 text-white text-lg font-medium">Are you sure?</p>
+      <div class="flex justify-center gap-4">
+        <button id="modal-save" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white min-w-[80px]">OK</button>
+        <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white min-w-[80px]">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
+
+  <!-- Stopwatch UI (initially hidden, toggled by logic if applicable) -->
+  <div id="stopwatch-controls" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 hidden">
+    <div class="glass border border-slate-700 p-4 rounded-xl shadow-lg text-center">
+      <div id="stopwatch-display" class="text-2xl font-semibold mb-3">00:00</div>
+      <div class="flex gap-4 justify-center">
+        <button id="start-button" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Start Practice</button>
+        <button id="stop-button" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white hidden">Stop & Save</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Build Timestamp -->
   <div class="fixed bottom-2 right-4 text-xs text-gray-500">
