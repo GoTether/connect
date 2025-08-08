@@ -15,6 +15,16 @@
     <input type="file" id="fileInput" accept=".json" class="mb-4">
     <button onclick="uploadTemplate()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Upload</button>
 
+    <div class="mt-8">
+      <h2 class="text-xl font-semibold mb-2">Create Template with AI</h2>
+      <textarea id="aiPrompt" rows="3" placeholder="Describe the template you want to create..." class="w-full p-2 border rounded mb-2"></textarea>
+      <button onclick="generateWithAI()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Generate Template</button>
+
+      <h3 class="mt-4 text-md font-semibold">Preview Result:</h3>
+      <textarea id="aiResult" rows="10" class="w-full p-2 border rounded font-mono text-sm"></textarea>
+      <button onclick="saveGeneratedTemplate()" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save to Firebase</button>
+    </div>
+
     <div id="message" class="mt-4 text-sm"></div>
   </div>
 
@@ -50,7 +60,6 @@
           let failCount = 0;
 
           if (parsed.name && parsed.dynamic_fields) {
-            // Single template object
             const key = parsed.name.replace(/\s+/g, '_').toLowerCase();
             db.ref(`/global_templates/${key}`).update(parsed).then(() => {
               message.textContent = `Uploaded template '${parsed.name}' successfully.`;
@@ -61,7 +70,6 @@
             return;
           }
 
-          // Multiple templates (object of objects)
           const entries = Object.entries(parsed);
           if (entries.length === 0) {
             message.textContent = "JSON file is empty.";
@@ -86,6 +94,60 @@
       };
 
       reader.readAsText(file);
+    }
+
+    async function generateWithAI() {
+      const prompt = document.getElementById('aiPrompt').value;
+      const resultBox = document.getElementById('aiResult');
+      const message = document.getElementById('message');
+
+      if (!prompt) {
+        message.textContent = 'Please enter a description for the template.';
+        return;
+      }
+
+      message.textContent = 'Generating with AI...';
+
+      try {
+        const res = await fetch('https://us-central1-tether-71e0c.cloudfunctions.net/generateTemplate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        const data = await res.json();
+        if (data.template) {
+          resultBox.value = JSON.stringify(data.template, null, 2);
+          message.textContent = 'Template generated. You can now review and save it.';
+        } else {
+          message.textContent = 'Failed to generate template.';
+        }
+      } catch (err) {
+        console.error(err);
+        message.textContent = 'Error calling AI function.';
+      }
+    }
+
+    function saveGeneratedTemplate() {
+      const text = document.getElementById('aiResult').value;
+      const message = document.getElementById('message');
+
+      try {
+        const parsed = JSON.parse(text);
+        if (!parsed.name) {
+          message.textContent = 'Template must have a name field.';
+          return;
+        }
+        const key = parsed.name.replace(/\s+/g, '_').toLowerCase();
+        db.ref(`/global_templates/${key}`).update(parsed).then(() => {
+          message.textContent = `Saved template '${parsed.name}' to Firebase.`;
+        }).catch(err => {
+          console.error(err);
+          message.textContent = 'Error saving template.';
+        });
+      } catch (err) {
+        message.textContent = 'Invalid JSON. Cannot save.';
+      }
     }
   </script>
 </body>
