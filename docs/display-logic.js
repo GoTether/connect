@@ -19,7 +19,6 @@ const tetherId = new URLSearchParams(window.location.search).get("id");
 
 /* ==================== Helpers ==================== */
 function escAttr(name) {
-  // Minimal attr escape for querySelector [name="..."]
   return String(name).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
@@ -31,7 +30,6 @@ function showModal(message, callback = null, showCancel = false) {
   const cancelBtn = document.getElementById("modal-cancel");
 
   if (!modal || !text || !saveBtn || !cancelBtn) {
-    // If modal somehow isn't present, just callback and bail
     console.warn("Modal elements missing");
     callback?.(true);
     return;
@@ -71,8 +69,16 @@ async function getLocationName(lat, lon) {
 window.resetTether = (id) => {
   showModal("Are you sure you want to delete this Tether and start over?", async (confirmed) => {
     if (!confirmed) return;
-    await remove(ref(db, `tethers/${id}`));
-    window.location.href = "display.html";
+    try {
+      await Promise.all([
+        remove(ref(db, `tethers/${id}`)),
+        remove(ref(db, `shared_logs/${id}`))
+      ]);
+      // Return to same ID so it shows the unassigned/template picker
+      window.location.href = `display.html?id=${id}`;
+    } catch (e) {
+      appEl.innerHTML = `<p class="text-red-500 mt-10 text-center">Error resetting Tether: ${e.message}</p>`;
+    }
   }, true);
 };
 
@@ -200,17 +206,14 @@ function setupStopwatch(tether, template, nonTimestampFields) {
   const stopBtn  = document.getElementById("stop-button");
   const display  = document.getElementById("stopwatch-display");
 
-  // Guard: if the HTML didn't render, don't crash
   if (!startBtn || !stopBtn || !display) {
     console.warn("Stopwatch controls not found in DOM.");
     showModal("Stopwatch UI failed to render. Try reloading.", null, true);
     return;
   }
 
-  // Prevent double clicks while saving
   let saving = false;
 
-  // Recover running session if present
   const key = `tether:${tetherId}:stopwatchStart`;
   const savedStart = localStorage.getItem(key);
   if (savedStart) {
@@ -250,7 +253,6 @@ function setupStopwatch(tether, template, nonTimestampFields) {
       "Duration (minutes)": durationMin
     };
 
-    // Optional extras from the small form
     for (const f of (nonTimestampFields || [])) {
       const el = document.querySelector(`[name="${escAttr(f.name)}"]`);
       const val = el?.value?.trim?.();
@@ -260,7 +262,8 @@ function setupStopwatch(tether, template, nonTimestampFields) {
     localStorage.removeItem(key);
 
     const save = async () => {
-      await push(ref(db, `tethers/${tetherId}/logs`), log);
+      // NEW: write Terra entries to shared_logs/{tetherId}/entries
+      await push(ref(db, `shared_logs/${tetherId}/entries`), log);
       showModal("Entry saved!", () => window.location.reload());
     };
 
@@ -285,8 +288,18 @@ async function renderAssigned(id) {
   const snap = await get(ref(db, `tethers/${id}`));
   const tether = snap.val();
   const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
-  const logsSnap = await get(child(ref(db), `tethers/${id}/logs`));
-  const logs = logsSnap.exists() ? Object.values(logsSnap.val()) : [];
+
+  // NEW: Prefer shared_logs/{id}/entries, fallback to legacy tethers/{id}/logs
+  const sharedRef = ref(db, `shared_logs/${id}/entries`);
+  const legacyRef = child(ref(db), `tethers/${id}/logs`);
+  let logs = [];
+  const [sharedSnap, legacySnap] = await Promise.all([get(sharedRef), get(legacyRef)]);
+  if (sharedSnap.exists()) {
+    logs = Object.values(sharedSnap.val());
+  } else if (legacySnap.exists()) {
+    logs = Object.values(legacySnap.val());
+  }
+
   // Sort newest -> oldest
   logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -299,7 +312,6 @@ async function renderAssigned(id) {
   if (hasTimestampField) {
     const nonTimestampFields = dynamicFields.filter(f => String(f.type).toLowerCase() !== "timestamp");
 
-    // Stopwatch UI + optional extras + log list
     appEl.innerHTML = `
       <div class="space-y-8">
         <div>
@@ -451,7 +463,8 @@ async function renderAssigned(id) {
     for (const [k, v] of formData.entries()) logEntry[k] = v;
 
     const save = async () => {
-      await push(ref(db, `tethers/${id}/logs`), logEntry);
+      // NEW: write Terra entries to shared_logs/{id}/entries
+      await push(ref(db, `shared_logs/${id}/entries`), logEntry);
       showModal("Entry saved!", () => window.location.reload());
     };
 
