@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ==================== Firebase init ==================== */
 const firebaseConfig = {
@@ -13,6 +14,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
 const appEl = document.getElementById("app");
 const tetherId = new URLSearchParams(window.location.search).get("id");
@@ -20,6 +22,12 @@ const tetherId = new URLSearchParams(window.location.search).get("id");
 /* ==================== Helpers ==================== */
 function escAttr(name) {
   return String(name).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+function ctag(strings, ...vals){ // tiny HTML sanitizer for simple joins
+  return strings.map((s,i)=>s + (vals[i] ?? "")).join("");
+}
+function niceDate(d){
+  try { return new Date(d).toLocaleString(); } catch { return d || ""; }
 }
 
 /* ==================== Modal controls ==================== */
@@ -105,7 +113,7 @@ window.goToTether = () => {
   if (id) window.location.href = `display.html?id=${id}`;
 };
 
-/* ==================== Unassigned tether flow ==================== */
+/* ==================== Unassigned tether flow (Terra assignment) ==================== */
 async function renderUnassigned(id) {
   const snap = await get(ref(db, "global_templates"));
   const templates = snap.val() || {};
@@ -188,7 +196,7 @@ function showStaticFieldModal(template, templateId, tetherId) {
   });
 }
 
-/* ==================== Stopwatch logic ==================== */
+/* ==================== Stopwatch logic (Terra w/ timestamp) ==================== */
 let timerStart = null;
 let timerInterval = null;
 
@@ -262,7 +270,7 @@ function setupStopwatch(tether, template, nonTimestampFields) {
     localStorage.removeItem(key);
 
     const save = async () => {
-      // NEW: write Terra entries to shared_logs/{tetherId}/entries
+      // Terra: write to shared_logs
       await push(ref(db, `shared_logs/${tetherId}/entries`), log);
       showModal("Entry saved!", () => window.location.reload());
     };
@@ -283,13 +291,47 @@ function setupStopwatch(tether, template, nonTimestampFields) {
   };
 }
 
-/* ==================== Assigned tether ==================== */
+/* ==================== AURA: ensure auth (anonymous ok) ==================== */
+function requireAuth(onReady) {
+  // If already signed in, call back; otherwise anonymous sign-in
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    if (user) { unsub(); onReady(user); return; }
+    try {
+      await signInAnonymously(auth);
+      // onAuthStateChanged will fire again and call onReady
+    } catch (e) {
+      appEl.innerHTML = `<div class="max-w-md mx-auto text-center mt-16">
+        <h2 class="text-2xl font-bold mb-2">Sign-in failed</h2>
+        <p class="text-gray-300">Anonymous authentication is required for Aura logs. Error: ${e.message}</p>
+      </div>`;
+    }
+  });
+}
+
+/* ==================== Render: Terra vs Aura ==================== */
 async function renderAssigned(id) {
   const snap = await get(ref(db, `tethers/${id}`));
   const tether = snap.val();
-  const template = (await get(ref(db, `global_templates/${tether.template}`))).val();
+  if (!tether) {
+    appEl.innerHTML = `<p class="text-red-500 mt-10 text-center">Tether not found.</p>`;
+    return;
+  }
 
-  // NEW: Prefer shared_logs/{id}/entries, fallback to legacy tethers/{id}/logs
+  const template = (await get(ref(db, `global_templates/${tether.template}`))).val() || {};
+  const scope = String(template.log_scope || "").toLowerCase();
+
+  if (scope === "aura") {
+    // AURA PATH
+    requireAuth(() => renderAura(id, tether, template));
+  } else {
+    // TERRA PATH (default)
+    await renderTerra(id, tether, template);
+  }
+}
+
+/* ==================== Terra renderer ==================== */
+async function renderTerra(id, tether, template) {
+  // Prefer shared_logs/{id}/entries, fallback to legacy tethers/{id}/logs
   const sharedRef = ref(db, `shared_logs/${id}/entries`);
   const legacyRef = child(ref(db), `tethers/${id}/logs`);
   let logs = [];
@@ -299,8 +341,6 @@ async function renderAssigned(id) {
   } else if (legacySnap.exists()) {
     logs = Object.values(legacySnap.val());
   }
-
-  // Sort newest -> oldest
   logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const dynamicFields = Array.isArray(template.fields) ? template.fields
@@ -312,10 +352,10 @@ async function renderAssigned(id) {
   if (hasTimestampField) {
     const nonTimestampFields = dynamicFields.filter(f => String(f.type).toLowerCase() !== "timestamp");
 
-    appEl.innerHTML = `
+    appEl.innerHTML = ctag`
       <div class="space-y-8">
         <div>
-          <h1 class="text-3xl font-bold">${template.name}</h1>
+          <h1 class="text-3xl font-bold">${template.name || "Terra Log"}</h1>
           <p class="text-sm text-gray-400">Template: ${tether.template}</p>
           <p class="text-sm text-gray-400">Tether ID: ${id}</p>
           <button onclick="resetTether('${id}')" class="text-red-400 text-sm underline hover:text-red-300 mt-1">Reset this Tether</button>
@@ -378,7 +418,7 @@ async function renderAssigned(id) {
         <div class="space-y-3" id="logList">
           ${logs.map(log => `
             <div class="bg-slate-700 rounded p-3 border border-slate-600">
-              <p class="text-sm text-gray-300 mb-1">${log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}</p>
+              <p class="text-sm text-gray-300 mb-1">${log.timestamp ? niceDate(log.timestamp) : ""}</p>
               ${Object.entries(log).filter(([k]) => k !== "timestamp").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
             </div>
           `).join("")}
@@ -390,19 +430,19 @@ async function renderAssigned(id) {
     return;
   }
 
-  /* ===== Fallback to regular form-based UI (no stopwatch) ===== */
+  // Regular form-based Terra UI
   appEl.innerHTML = `
     <div class="space-y-8">
       <div>
-        <h1 class="text-3xl font-bold">${template.name}</h1>
+        <h1 class="text-3xl font-bold">${template.name || "Terra Log"}</h1>
         <p class="text-sm text-gray-400">Template: ${tether.template}</p>
         <p class="text-sm text-gray-400">Tether ID: ${id}</p>
         <button onclick="resetTether('${id}')" class="text-red-400 text-sm underline hover:text-red-300 mt-1">Reset this Tether</button>
       </div>
 
-      ${Array.isArray(staticFields) && staticFields.length ? `
+      ${Array.isArray(template.static_fields) && template.static_fields.length ? `
         <div class="bg-slate-700 p-4 rounded space-y-2">
-          ${staticFields.map(f => `
+          ${template.static_fields.map(f => `
             <div>
               <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
               <input class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600" value="${tether.static?.[f.name] || ''}" disabled />
@@ -412,7 +452,10 @@ async function renderAssigned(id) {
 
       <form id="logForm" class="space-y-4">
         <h2 class="text-xl font-semibold">New Entry</h2>
-        ${dynamicFields.map(f => {
+        ${(
+          Array.isArray(template.fields) ? template.fields
+          : (Array.isArray(template.dynamic_fields) ? template.dynamic_fields : [])
+        ).map(f => {
           const type = String(f.type || "text").toLowerCase();
           if (type === "dropdown") {
             return `
@@ -448,7 +491,7 @@ async function renderAssigned(id) {
       <div class="space-y-3" id="logList">
         ${logs.map(log => `
           <div class="bg-slate-700 rounded p-3 border border-slate-600">
-            <p class="text-sm text-gray-300 mb-1">${log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}</p>
+            <p class="text-sm text-gray-300 mb-1">${log.timestamp ? niceDate(log.timestamp) : ""}</p>
             ${Object.entries(log).filter(([k]) => k !== "timestamp").map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
           </div>
         `).join("")}
@@ -463,9 +506,120 @@ async function renderAssigned(id) {
     for (const [k, v] of formData.entries()) logEntry[k] = v;
 
     const save = async () => {
-      // NEW: write Terra entries to shared_logs/{id}/entries
+      // Terra: write to shared_logs
       await push(ref(db, `shared_logs/${id}/entries`), logEntry);
       showModal("Entry saved!", () => window.location.reload());
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        try {
+          logEntry["Location"] = await getLocationName(pos.coords.latitude, pos.coords.longitude);
+        } catch {}
+        await save();
+      }, async () => { await save(); });
+    } else {
+      await save();
+    }
+  });
+}
+
+/* ==================== Aura renderer ==================== */
+async function renderAura(id, tether, template) {
+  // Ensure the user is signed-in (anonymous allowed). requireAuth already called before this.
+  const user = auth.currentUser;
+  const uid = user?.uid;
+  if (!uid) {
+    appEl.innerHTML = `<p class="text-red-500 mt-10 text-center">Unable to determine user. Please reload.</p>`;
+    return;
+  }
+
+  // Read the user's entries for this template
+  const userLogsRef = ref(db, `users/${uid}/logs/${tether.template}/entries`);
+  const snap = await get(userLogsRef);
+  let myEntries = snap.exists() ? Object.values(snap.val()) : [];
+  // Filter to this tether (we'll stamp tetherId on save)
+  myEntries = myEntries.filter(e => !e.tetherId || e.tetherId === id);
+  myEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  const fields = Array.isArray(template.fields) ? template.fields
+               : (Array.isArray(template.dynamic_fields) ? template.dynamic_fields : []);
+
+  // Reference content (optional) for the tether
+  let refTitle = "", refDesc = "", refImg = "";
+  try {
+    const refSnap = await get(ref(db, `reference_content/${id}`));
+    const rc = refSnap.val();
+    if (rc) { refTitle = rc.title || ""; refDesc = rc.description || ""; refImg = rc.image || ""; }
+  } catch {}
+
+  appEl.innerHTML = `
+    <div class="space-y-8">
+      <header>
+        <h1 class="text-3xl font-bold">${template.name || "Aura Log"}</h1>
+        <p class="text-sm text-gray-400">Tether ID: ${id}</p>
+        ${refTitle ? `<p class="text-sm text-indigo-300 mt-1">${refTitle}</p>` : ""}
+        ${refDesc ? `<p class="text-sm text-gray-300 max-w-2xl mt-1">${refDesc}</p>` : ""}
+        ${refImg ? `<img src="${refImg}" alt="Reference" class="mt-3 max-h-48 rounded border border-slate-600"/>` : ""}
+      </header>
+
+      <form id="auraForm" class="space-y-4">
+        <h2 class="text-xl font-semibold">New Personal Entry</h2>
+        ${fields.map(f => {
+          const type = String(f.type || "text").toLowerCase();
+          if (type === "dropdown") {
+            return `
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
+                <select name="${f.name}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600">
+                  ${(f.options || []).map(opt => `<option value="${opt}">${opt}</option>`).join("")}
+                </select>
+              </div>
+            `;
+          } else if (type === "textarea") {
+            return `
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
+                <textarea name="${f.name}" rows="3" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"></textarea>
+              </div>
+            `;
+          } else {
+            const inputType = (["text","number","date","time","datetime-local","timestamp"].includes(type))
+              ? (type === "timestamp" ? "datetime-local" : type)
+              : "text";
+            return `
+              <div>
+                <label class="block text-sm text-gray-300 mb-1">${f.name}</label>
+                <input name="${f.name}" type="${inputType}" class="w-full px-3 py-2 rounded bg-slate-800 text-white border border-slate-600"/>
+              </div>
+            `;
+          }
+        }).join("")}
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">Save Personal Entry</button>
+      </form>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold">Your Entries for this Tether</h2>
+        ${myEntries.length ? myEntries.map(log => `
+          <div class="bg-slate-700 rounded p-3 border border-slate-600">
+            <p class="text-sm text-gray-300 mb-1">${log.timestamp ? niceDate(log.timestamp) : ""}</p>
+            ${Object.entries(log).filter(([k]) => !["timestamp","tetherId"].includes(k)).map(([k, v]) => `<p><strong>${k}:</strong> ${v}</p>`).join("")}
+          </div>
+        `).join("") : `<p class="text-gray-400">No entries yet.</p>`}
+      </section>
+    </div>
+  `;
+
+  // Submit handler (Aura)
+  document.getElementById("auraForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const logEntry = { timestamp: new Date().toISOString(), tetherId: id };
+    for (const [k, v] of formData.entries()) logEntry[k] = v;
+
+    const save = async () => {
+      await push(userLogsRef, logEntry);
+      showModal("Personal entry saved!", () => window.location.reload());
     };
 
     if (navigator.geolocation) {
